@@ -6,7 +6,8 @@ ARG APP_PATH
 WORKDIR $APP_PATH
 
 # ---
-FROM node:26.3.0-slim AS runner
+# might need to switch back FROM node:26.3.0-slim AS runner
+FROM node:22-alpine AS base
 
 LABEL org.opencontainers.image.source="https://github.com/outline/outline"
 
