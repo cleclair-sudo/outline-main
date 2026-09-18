@@ -42,7 +42,7 @@ RUN mkdir -p "$FILE_STORAGE_LOCAL_ROOT_DIR" && \
     chown -R nodejs:nodejs "$FILE_STORAGE_LOCAL_ROOT_DIR" && \
     chmod 1777 "$FILE_STORAGE_LOCAL_ROOT_DIR"
 
-// may need to reinsert VOLUME /var/lib/outline/data
+# may need to reinsert VOLUME /var/lib/outline/data
 
 USER nodejs
 
