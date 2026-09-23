@@ -426,7 +426,7 @@ export class Environment {
   @IsNumber()
   @IsOptional()
   public EMAIL_BUFFERING_WINDOW_HOURS =
-    this.toOptionalNumber(environment.EMAIL_BUFFERING_WINDOW_HOURS) ?? 3;
+    this.toOptionalNumber(environment.EMAIL_BUFFERING_WINDOW_HOURS) ?? 1;
 
   /**
    * Optional hostname of the client, used for identifying to the server
