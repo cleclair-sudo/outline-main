@@ -381,6 +381,8 @@ export enum UserPreference {
   SidebarSectionOrder = "sidebarSectionOrder",
   /** Whether the user wants email notifications buffered and sent on a schedule. */
   BufferEmailNotifications = "bufferEmailNotifications",
+  /** The number of minutes to delay buffered email delivery for this user. */
+  BufferEmailNotificationsMinutes = "bufferEmailNotificationsMinutes",
 }
 
 export enum HeadingPrefixStyle {
@@ -425,6 +427,7 @@ export type UserPreferences = {
   [UserPreference.NotificationBadge]?: NotificationBadgeType;
   [UserPreference.SidebarSectionOrder]?: SidebarSection[];
   [UserPreference.BufferEmailNotifications]?: boolean;
+  [UserPreference.BufferEmailNotificationsMinutes]?: number;
 };
 
 export type SourceMetadata = {

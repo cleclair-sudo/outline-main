@@ -14,6 +14,7 @@ import {
 } from "../queues";
 import processors from "../queues/processors";
 import tasks from "../queues/tasks";
+import { getEmailBufferingCron } from "@server/utils/emailBuffering";
 
 export default async function init() {
   await initI18n();
@@ -205,8 +206,10 @@ export default async function init() {
   // Schedule the buffered email sender as a repeating task when buffering enabled
   if (env.EMAIL_BUFFERING) {
     try {
-      const windowHours = env.EMAIL_BUFFERING_WINDOW_HOURS ?? 3;
-      const cron = `0 */${windowHours} * * *`;
+      const windowMinutes =
+        env.EMAIL_BUFFERING_WINDOW_MINUTES ??
+        (env.EMAIL_BUFFERING_WINDOW_HOURS ?? 1) * 60;
+      const cron = getEmailBufferingCron(windowMinutes);
       await taskQueue().add(
         {
           name: "BufferedEmailSenderTask",

@@ -127,6 +127,30 @@ function Preferences() {
     [user, t]
   );
 
+  const bufferMinutesOptions: Option[] = React.useMemo(
+    () => [
+      { type: "item", label: t("5 minutes"), value: "5" },
+      { type: "item", label: t("10 minutes"), value: "10" },
+      { type: "item", label: t("20 minutes"), value: "20" },
+      { type: "item", label: t("30 minutes"), value: "30" },
+      { type: "item", label: t("1 hour"), value: "60" },
+      { type: "item", label: t("2 hours"), value: "120" },
+    ],
+    [t]
+  );
+
+  const handleBufferEmailNotificationsMinutesChange = React.useCallback(
+    async (value: string) => {
+      user.setPreference(
+        UserPreference.BufferEmailNotificationsMinutes,
+        Number(value)
+      );
+      await user.save();
+      toast.success(t("Preferences saved"));
+    },
+    [user, t]
+  );
+
   const notificationBadgeOptions: Option[] = React.useMemo(
     () => [
       {
@@ -349,6 +373,24 @@ function Preferences() {
           name={UserPreference.BufferEmailNotifications}
           checked={!!user.getPreference(UserPreference.BufferEmailNotifications)}
           onChange={handleBufferEmailNotificationsChange}
+        />
+      </SettingRow>
+      <SettingRow
+        name={UserPreference.BufferEmailNotificationsMinutes}
+        label={t("Buffer delay")}
+        description={t(
+          "Choose how long buffered notification emails wait before being sent."
+        )}
+      >
+        <InputSelect
+          options={bufferMinutesOptions}
+          value={String(
+            user.getPreference(UserPreference.BufferEmailNotificationsMinutes)
+          )}
+          onChange={handleBufferEmailNotificationsMinutesChange}
+          label={t("Buffer delay")}
+          labelHidden
+          disabled={!user.getPreference(UserPreference.BufferEmailNotifications)}
         />
       </SettingRow>
       <AutoLaunchSetting />

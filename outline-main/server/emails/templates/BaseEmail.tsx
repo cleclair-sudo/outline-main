@@ -25,6 +25,7 @@ import { TextHelper } from "@server/models/helpers/TextHelper";
 import { taskQueue } from "@server/queues";
 import { TaskPriority } from "@server/queues/tasks/base/BaseTask";
 import type { NotificationMetadata } from "@server/types";
+import { getEmailBufferingWindowMinutes } from "@server/utils/emailBuffering";
 
 export enum EmailMessageCategory {
   Authentication = "authentication",
@@ -79,6 +80,7 @@ export default abstract class BaseEmail<
     if (env.EMAIL_BUFFERING) {
       try {
         let shouldBuffer = false;
+        let user: User | null = null;
 
         // Prefer the notification's user when available in metadata
         const notificationId = (this.metadata as any)?.notificationId;
@@ -87,7 +89,7 @@ export default abstract class BaseEmail<
           const notification = await Notification.scope("withUser").findByPk(
             notificationId
           );
-          const user = notification?.user;
+          user = notification?.user ?? null;
           if (user) {
             shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
           }
@@ -96,15 +98,23 @@ export default abstract class BaseEmail<
         // Fall back to finding a user by the recipient email address
         if (!shouldBuffer && (this.props as any)?.to) {
           const to = (this.props as any).to as string;
-          const user = await User.findOne({ where: { email: to?.toLowerCase() } });
+          user = await User.findOne({ where: { email: to?.toLowerCase() } });
           if (user) {
             shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
           }
         }
 
-        if (shouldBuffer) {
-          const windowHours = env.EMAIL_BUFFERING_WINDOW_HOURS ?? 3;
-          const msWindow = windowHours * 60 * 60 * 1000;
+        if (shouldBuffer && user) {
+          const userBufferMinutes = user.getPreference(
+            UserPreference.BufferEmailNotificationsMinutes
+          );
+          const windowMinutes = getEmailBufferingWindowMinutes({
+            EMAIL_BUFFERING_WINDOW_MINUTES:
+              env.EMAIL_BUFFERING_WINDOW_MINUTES,
+            EMAIL_BUFFERING_WINDOW_HOURS: env.EMAIL_BUFFERING_WINDOW_HOURS,
+            userBufferMinutes,
+          });
+          const msWindow = windowMinutes * 60 * 1000;
           const scheduledAt = Math.ceil(Date.now() / msWindow) * msWindow;
 
           void BufferedEmailStore.add({

@@ -112,4 +112,5 @@ export const UserPreferenceDefaults: UserPreferences = {
   [UserPreference.EnableSmartText]: true,
   [UserPreference.NotificationBadge]: NotificationBadgeType.Count,
   [UserPreference.BufferEmailNotifications]: false,
+  [UserPreference.BufferEmailNotificationsMinutes]: 20,
 };
