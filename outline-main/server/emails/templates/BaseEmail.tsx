@@ -124,9 +124,19 @@ export default abstract class BaseEmail<
             scheduledAt,
           });
 
+          Logger.info(
+            "email",
+            `Email ${templateName} buffered for user ${user.id} with ${windowMinutes} minute delay; scheduledAt=${scheduledAt}`
+          );
+
           Metrics.increment("email.buffered", { templateName });
           return;
         }
+
+        Logger.info(
+          "email",
+          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}`
+        );
       } catch (err) {
         Logger.error("Failed to buffer email (preference check)", err);
       }
