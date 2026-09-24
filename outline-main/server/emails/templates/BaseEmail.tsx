@@ -96,7 +96,7 @@ export default abstract class BaseEmail<
         }
 
         // Fall back to finding a user by the recipient email address
-        if (!shouldBuffer && (this.props as any)?.to) {
+        if (!user && (this.props as any)?.to) {
           const to = (this.props as any).to as string;
           user = await User.findOne({ where: { email: to?.toLowerCase() } });
           if (user) {
@@ -115,7 +115,7 @@ export default abstract class BaseEmail<
             userBufferMinutes,
           });
           const msWindow = windowMinutes * 60 * 1000;
-          const scheduledAt = Math.ceil(Date.now() / msWindow) * msWindow;
+          const scheduledAt = Date.now() + msWindow;
 
           void BufferedEmailStore.add({
             templateName,
