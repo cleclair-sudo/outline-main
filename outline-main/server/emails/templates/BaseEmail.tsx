@@ -260,6 +260,8 @@ export default abstract class BaseEmail<
       throw err;
     }
 
+    await this.afterSend?.(data);
+
     if (notification) {
       try {
         notification.emailedAt = new Date();
@@ -272,6 +274,36 @@ export default abstract class BaseEmail<
         );
       }
     }
+  }
+
+  public async renderForDigest(): Promise<
+    | {
+        component: JSX.Element;
+        text: string;
+        notification?: Notification;
+      }
+    | undefined
+  > {
+    const bsResponse = await this.beforeSend?.(this.props);
+    if (bsResponse === false) {
+      return;
+    }
+
+    const notification = this.metadata?.notificationId
+      ? await Notification.scope(["withActor", "withUser"]).findByPk(
+          this.metadata.notificationId
+        )
+      : undefined;
+    if (notification?.viewedAt) {
+      return;
+    }
+
+    const data = { ...this.props, notification, ...(bsResponse ?? ({} as S)) };
+    return {
+      component: this.render(data),
+      text: this.renderAsText(data),
+      notification,
+    };
   }
 
   private from(props: S & T): EmailAddress {
@@ -391,6 +423,8 @@ export default abstract class BaseEmail<
    * fromName hook allows overriding the "from" name of the email.
    */
   protected fromName?(props: T): string | undefined;
+
+  protected afterSend?(props: S & T): Promise<void>;
 
   /**
    * A HTML string to be rendered in the email from a ProseMirror node. The string

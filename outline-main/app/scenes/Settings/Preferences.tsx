@@ -363,9 +363,9 @@ function Preferences() {
 
       <SettingRow
         name={UserPreference.BufferEmailNotifications}
-        label={t("Buffer email notifications")}
+        label={t("Enable digest")}
         description={t(
-          "When enabled, notification emails will be buffered and delivered on a regular schedule instead of immediately."
+          "When enabled, notification emails will be combined into a digest."
         )}
       >
         <Switch
@@ -377,9 +377,9 @@ function Preferences() {
       </SettingRow>
       <SettingRow
         name={UserPreference.BufferEmailNotificationsMinutes}
-        label={t("Buffer delay")}
+        label={t("Select digest timeframe")}
         description={t(
-          "Choose how long buffered notification emails wait before being sent."
+          "Choose how often the notification digest is sent."
         )}
       >
         <InputSelect
@@ -388,7 +388,7 @@ function Preferences() {
             user.getPreference(UserPreference.BufferEmailNotificationsMinutes)
           )}
           onChange={handleBufferEmailNotificationsMinutesChange}
-          label={t("Buffer delay")}
+          label={t("Select digest timeframe")}
           labelHidden
           disabled={!user.getPreference(UserPreference.BufferEmailNotifications)}
         />

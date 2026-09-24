@@ -1,7 +1,9 @@
 import { BaseTask } from "./base/BaseTask";
 import BufferedEmailStore from "@server/emails/BufferedEmailStore";
 import emails from "@server/emails/templates";
+import DigestEmail from "@server/emails/templates/DigestEmail";
 import Logger from "@server/logging/Logger";
+import { groupBufferedEmailItems } from "@server/utils/emailDigest";
 
 type Props = {};
 
@@ -16,9 +18,40 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
       return;
     }
 
-    Logger.info("BufferedEmailSenderTask", `Sending ${items.length} buffered emails`);
+    const notificationItems = items.filter(
+      (item) => item.metadata?.notificationId
+    );
+    const otherItems = items.filter(
+      (item) => !item.metadata?.notificationId
+    );
+    const groups = groupBufferedEmailItems(notificationItems);
 
-    for (const item of items) {
+    Logger.info(
+      "BufferedEmailSenderTask",
+      `Sending ${groups.length} notification digests and ${otherItems.length} buffered emails`
+    );
+
+    for (const group of groups) {
+      try {
+        const first = group[0];
+        if (!first || typeof first.props.to !== "string") {
+          continue;
+        }
+        const email = new DigestEmail({
+          to: first.props.to,
+          language:
+            typeof first.props.language === "string"
+              ? first.props.language
+              : undefined,
+          items: group,
+        });
+        await email.send();
+      } catch (err) {
+        Logger.error("Failed to send buffered email digest", err, group);
+      }
+    }
+
+    for (const item of otherItems) {
       try {
         const EmailClass = (emails as any)[item.templateName];
         if (!EmailClass) {
