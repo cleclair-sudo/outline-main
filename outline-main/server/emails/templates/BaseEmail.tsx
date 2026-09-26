@@ -1,6 +1,7 @@
 import type { EmailAddress } from "addressparser";
 import addressparser from "addressparser";
 import type Bull from "bull";
+import { diffChars } from "diff";
 import invariant from "invariant";
 import { t as i18nT } from "i18next";
 import { subMinutes } from "date-fns";
@@ -8,7 +9,7 @@ import type { Node } from "prosemirror-model";
 import { Op } from "sequelize";
 import { toError } from "@shared/utils/error";
 import { randomString } from "@shared/random";
-import { TeamPreference } from "@shared/types";
+import { NotificationEventType, TeamPreference } from "@shared/types";
 import { unicodeCLDRtoBCP47 } from "@shared/utils/date";
 import { Day } from "@shared/utils/time";
 import mailer from "@server/emails/mailer";
@@ -16,10 +17,11 @@ import env from "@server/env";
 import Logger from "@server/logging/Logger";
 import Metrics from "@server/logging/Metrics";
 import BufferedEmailStore from "@server/emails/BufferedEmailStore";
-import { User, View } from "@server/models";
+import { Revision, User, View } from "@server/models";
 import { UserPreference } from "@shared/types";
 import type { Team } from "@server/models";
 import Notification from "@server/models/Notification";
+import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
 import HTMLHelper from "@server/models/helpers/HTMLHelper";
 import { ProsemirrorHelper } from "@server/models/helpers/ProsemirrorHelper";
 import { TextHelper } from "@server/models/helpers/TextHelper";
@@ -77,9 +79,11 @@ export default abstract class BaseEmail<
 
     if (notificationId) {
       try {
-        notification = await Notification.scope("withUser").findByPk(
-          notificationId
-        );
+        notification = await Notification.scope([
+          "withUser",
+          "withActor",
+          "withDocument",
+        ]).findByPk(notificationId);
       } catch (err) {
         Logger.error(
           "Failed to load notification before scheduling email",
@@ -89,8 +93,7 @@ export default abstract class BaseEmail<
       }
 
       if (notification?.user && this.props.to) {
-        const subject =
-          notification.document?.title ?? notification.collection?.name;
+        const subject = notification.document?.title;
         const notificationMessage = [
           notification.actor?.name,
           notification.event,
@@ -101,8 +104,11 @@ export default abstract class BaseEmail<
 
         Logger.info("email", "[NOTIFICATION SCHEDULED]", {
           decidedAt: new Date().toISOString(),
+          notificationId: notification.id,
+          documentId: notification.documentId,
           recipientName: notification.user.name,
           notificationMessage,
+          changes: await this.getNotificationChanges(notification),
           templateName,
         });
       }
@@ -356,6 +362,37 @@ export default abstract class BaseEmail<
     }
 
     return !!view;
+  }
+
+  private async getNotificationChanges(notification: Notification) {
+    if (
+      notification.event !== NotificationEventType.UpdateDocument ||
+      !notification.revisionId
+    ) {
+      return undefined;
+    }
+
+    const revision = await Revision.findByPk(notification.revisionId);
+    if (!revision) {
+      return undefined;
+    }
+
+    const previousRevision = await revision.before();
+    const changedParts = (before: string, after: string) =>
+      diffChars(before, after)
+        .filter((part) => part.added || part.removed)
+        .map((part) => ({
+          type: part.added ? "added" : "removed",
+          text: part.value,
+        }));
+
+    return {
+      title: changedParts(previousRevision?.title ?? "", revision.title),
+      content: changedParts(
+        previousRevision ? DocumentHelper.toPlainText(previousRevision) : "",
+        DocumentHelper.toPlainText(revision)
+      ),
+    };
   }
 
   private from(props: S & T): EmailAddress {
