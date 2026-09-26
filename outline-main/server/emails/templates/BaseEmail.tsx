@@ -306,10 +306,10 @@ export default abstract class BaseEmail<
   }
 
   protected logNotificationSent(notification: Notification, message: string) {
-    Logger.info("email", "Notification sent", {
+    Logger.info("email", "[NOTIFICATION SENT]", {
       sentAt: new Date().toISOString(),
       recipientName: notification.user?.name ?? "Unknown recipient",
-      message,
+      notificationMessage: message,
     });
   }
 
