@@ -72,6 +72,41 @@ export default abstract class BaseEmail<
     }
 
     const templateName = this.constructor.name;
+    const notificationId = this.metadata?.notificationId;
+    let notification: Notification | null = null;
+
+    if (notificationId) {
+      try {
+        notification = await Notification.scope("withUser").findByPk(
+          notificationId
+        );
+      } catch (err) {
+        Logger.error(
+          "Failed to load notification before scheduling email",
+          toError(err),
+          { notificationId }
+        );
+      }
+
+      if (notification?.user && this.props.to) {
+        const subject =
+          notification.document?.title ?? notification.collection?.name;
+        const notificationMessage = [
+          notification.actor?.name,
+          notification.event,
+          subject,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        Logger.info("email", "[NOTIFICATION SCHEDULED]", {
+          decidedAt: new Date().toISOString(),
+          recipientName: notification.user.name,
+          notificationMessage,
+          templateName,
+        });
+      }
+    }
 
     Metrics.increment("email.scheduled", {
       templateName,
@@ -81,19 +116,11 @@ export default abstract class BaseEmail<
     if (env.EMAIL_BUFFERING) {
       try {
         let shouldBuffer = false;
-        let user: User | null = null;
+        let user: User | null = notification?.user ?? null;
 
         // Prefer the notification's user when available in metadata
-        const notificationId = (this.metadata as any)?.notificationId;
-        if (notificationId) {
-          const Notification = (await import("@server/models/Notification")).default;
-          const notification = await Notification.scope("withUser").findByPk(
-            notificationId
-          );
-          user = notification?.user ?? null;
-          if (user) {
-            shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
-          }
+        if (user) {
+          shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
         }
 
         // Fall back to finding a user by the recipient email address
@@ -245,9 +272,6 @@ export default abstract class BaseEmail<
         unsubscribeUrl: this.unsubscribeUrl?.(data),
         tags: { category: this.category, template: templateName },
       });
-      if (notification) {
-        this.logNotificationSent(notification, subject);
-      }
       Metrics.increment("email.sent", {
         templateName,
       });
@@ -278,7 +302,6 @@ export default abstract class BaseEmail<
     | {
         component: JSX.Element;
         text: string;
-        subject: string;
         notification?: Notification;
       }
     | undefined
@@ -300,17 +323,8 @@ export default abstract class BaseEmail<
     return {
       component: this.render(data),
       text: this.renderAsText(data),
-      subject: this.subject(data),
       notification,
     };
-  }
-
-  protected logNotificationSent(notification: Notification, message: string) {
-    Logger.info("email", "[NOTIFICATION SENT]", {
-      sentAt: new Date().toISOString(),
-      recipientName: notification.user?.name ?? "Unknown recipient",
-      notificationMessage: message,
-    });
   }
 
   private async shouldSkipViewedNotification(notification: Notification) {

@@ -18,7 +18,6 @@ type InputProps = EmailProps & {
 type DigestContent = {
   component: JSX.Element;
   text: string;
-  subject: string;
   notification?: Notification;
 };
 
@@ -87,11 +86,10 @@ export default class DigestEmail extends BaseEmail<InputProps, { contents: Diges
 
   protected async afterSend({ contents }: Props) {
     await Promise.all(
-      contents.map(async ({ notification, subject }) => {
+      contents.map(async ({ notification }) => {
         if (!notification) {
           return;
         }
-        this.logNotificationSent(notification, subject);
         try {
           notification.emailedAt = new Date();
           await notification.save();
