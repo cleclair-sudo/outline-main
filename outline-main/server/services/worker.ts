@@ -43,7 +43,7 @@ export default async function init() {
 
         setResource(`Event.${event.name}`);
 
-        Logger.info("worker", `Processing ${event.name}`, {
+        Logger.debug("worker", `Processing ${event.name}`, {
           event,
           attempt: job.attemptsMade,
         });
@@ -134,7 +134,7 @@ export default async function init() {
         const processor = new ProcessorClass();
 
         if (processor.perform) {
-          Logger.info("worker", `${name} running ${event.name}`, {
+          Logger.debug("worker", `${name} running ${event.name}`, {
             event,
           });
 
@@ -181,7 +181,7 @@ export default async function init() {
           );
         }
 
-        Logger.info("worker", `${name} running`, props);
+        Logger.debug("worker", `${name} running`, props);
 
         // @ts-expect-error We will not instantiate an abstract class
         const task = new TaskClass();
