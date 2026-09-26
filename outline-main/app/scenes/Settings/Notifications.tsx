@@ -19,7 +19,7 @@ import {
 import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
-import { NotificationEventType } from "@shared/types";
+import { NotificationEventType, UserPreference } from "@shared/types";
 import Heading from "~/components/Heading";
 import Notice from "~/components/Notice";
 import Scene from "~/components/Scene";
@@ -169,6 +169,15 @@ function Notifications() {
     [user, showSuccessMessage]
   );
 
+  const handleEmailViewedNotificationsChange = React.useCallback(
+    async (checked: boolean) => {
+      user.setPreference(UserPreference.EmailViewedDocumentNotifications, checked);
+      await user.save();
+      showSuccessMessage();
+    },
+    [user, showSuccessMessage]
+  );
+
   const handleToggleAll = React.useCallback(
     async (checked: boolean) => {
       runInAction(() => {
@@ -219,6 +228,22 @@ function Notifications() {
           id="allNotifications"
           checked={allEnabled}
           onChange={handleToggleAll}
+        />
+      </SettingRow>
+
+      <SettingRow
+        name={UserPreference.EmailViewedDocumentNotifications}
+        label={t("Email me about documents I've already viewed")}
+        description={t(
+          "Turn this off to skip notification emails when you have viewed the document since the update."
+        )}
+        compact
+      >
+        <Switch
+          id={UserPreference.EmailViewedDocumentNotifications}
+          name={UserPreference.EmailViewedDocumentNotifications}
+          checked={!!user.getPreference(UserPreference.EmailViewedDocumentNotifications)}
+          onChange={handleEmailViewedNotificationsChange}
         />
       </SettingRow>
 

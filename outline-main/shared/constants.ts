@@ -113,4 +113,5 @@ export const UserPreferenceDefaults: UserPreferences = {
   [UserPreference.NotificationBadge]: NotificationBadgeType.Count,
   [UserPreference.BufferEmailNotifications]: false,
   [UserPreference.BufferEmailNotificationsMinutes]: 20,
+  [UserPreference.EmailViewedDocumentNotifications]: true,
 };

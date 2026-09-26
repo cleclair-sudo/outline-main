@@ -67,7 +67,52 @@ describe("revisions.create", () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  test("should not send a notification if viewed since update", async () => {
+  test("should send a notification even if recently emailed about the document", async () => {
+    const user = await buildUser();
+    let document = await buildDocument({
+      teamId: user.teamId,
+      userId: user.id,
+    });
+    await Revision.createFromDocument(createContext({ user }), document);
+
+    document = updateDocumentText(document, "Updated body content");
+    const collaborator = await buildUser({ teamId: document.teamId });
+    const revision = await Revision.createFromDocument(
+      createContext({ user: collaborator }),
+      document
+    );
+    document.collaboratorIds = [user.id, collaborator.id];
+    await document.save();
+
+    await Notification.create({
+      event: NotificationEventType.UpdateDocument,
+      userId: user.id,
+      revisionId: revision.id,
+      actorId: collaborator.id,
+      teamId: document.teamId,
+      documentId: document.id,
+      emailedAt: new Date(),
+    });
+
+    const spy = vi.spyOn(Notification, "create");
+    const task = new RevisionCreatedNotificationsTask();
+    await task.perform({
+      name: "revisions.create",
+      documentId: document.id,
+      teamId: document.teamId,
+      actorId: collaborator.id,
+      modelId: revision.id,
+      ip,
+    });
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: NotificationEventType.UpdateDocument,
+        userId: user.id,
+      })
+    );
+  });
+
+  test("should send a notification even if viewed since update", async () => {
     const spy = vi.spyOn(Notification, "create");
     const user = await buildUser();
     let document = await buildDocument({
@@ -92,7 +137,7 @@ describe("revisions.create", () => {
     );
 
     await View.create({
-      userId: collaborator.id,
+      userId: user.id,
       documentId: document.id,
     });
 
@@ -105,7 +150,12 @@ describe("revisions.create", () => {
       modelId: revision.id,
       ip,
     });
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: NotificationEventType.UpdateDocument,
+        userId: user.id,
+      })
+    );
   });
 
   test("should not send a notification to last editor", async () => {
@@ -477,42 +527,6 @@ describe("revisions.create", () => {
 
     // Should send notification to `collaborator` and not `subscriber`.
     expect(spy).toHaveBeenCalledTimes(1);
-  });
-
-  test("should not send a notification if viewed since update", async () => {
-    const spy = vi.spyOn(Notification, "create");
-
-    const document = await buildDocument();
-    const collaborator = await buildUser({ teamId: document.teamId });
-    const revision = await Revision.createFromDocument(
-      createContext({ user: collaborator }),
-      document
-    );
-    document.collaboratorIds = [collaborator.id];
-    await document.save();
-
-    // Backdate the update so the view is recorded strictly after it.
-    await document.update(
-      { updatedAt: subSeconds(new Date(), 60) },
-      { silent: true }
-    );
-
-    await View.create({
-      userId: collaborator.id,
-      documentId: document.id,
-    });
-
-    const task = new RevisionCreatedNotificationsTask();
-
-    await task.perform({
-      name: "revisions.create",
-      documentId: document.id,
-      teamId: document.teamId,
-      actorId: collaborator.id,
-      modelId: revision.id,
-      ip,
-    });
-    expect(spy).not.toHaveBeenCalled();
   });
 
   test("should not send a notification to last editor", async () => {

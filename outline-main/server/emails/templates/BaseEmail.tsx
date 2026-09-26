@@ -5,6 +5,7 @@ import invariant from "invariant";
 import { t as i18nT } from "i18next";
 import { subMinutes } from "date-fns";
 import type { Node } from "prosemirror-model";
+import { Op } from "sequelize";
 import { toError } from "@shared/utils/error";
 import { randomString } from "@shared/random";
 import { TeamPreference } from "@shared/types";
@@ -15,7 +16,7 @@ import env from "@server/env";
 import Logger from "@server/logging/Logger";
 import Metrics from "@server/logging/Metrics";
 import BufferedEmailStore from "@server/emails/BufferedEmailStore";
-import { User } from "@server/models";
+import { User, View } from "@server/models";
 import { UserPreference } from "@shared/types";
 import type { Team } from "@server/models";
 import Notification from "@server/models/Notification";
@@ -202,16 +203,10 @@ export default abstract class BaseEmail<
           this.metadata?.notificationId
         )
       : undefined;
-    const data = { ...this.props, notification, ...(bsResponse ?? ({} as S)) };
-
-    if (notification?.viewedAt) {
-      Logger.info(
-        "email",
-        `Email ${templateName} not sent as already viewed`,
-        this.props
-      );
+    if (notification && (await this.shouldSkipViewedNotification(notification))) {
       return;
     }
+    const data = { ...this.props, notification, ...(bsResponse ?? ({} as S)) };
 
     const messageId = notification
       ? Notification.emailMessageId(notification.id)
@@ -250,6 +245,9 @@ export default abstract class BaseEmail<
         unsubscribeUrl: this.unsubscribeUrl?.(data),
         tags: { category: this.category, template: templateName },
       });
+      if (notification) {
+        this.logNotificationSent(notification, subject);
+      }
       Metrics.increment("email.sent", {
         templateName,
       });
@@ -280,6 +278,7 @@ export default abstract class BaseEmail<
     | {
         component: JSX.Element;
         text: string;
+        subject: string;
         notification?: Notification;
       }
     | undefined
@@ -294,16 +293,55 @@ export default abstract class BaseEmail<
           this.metadata.notificationId
         )
       : undefined;
-    if (notification?.viewedAt) {
+    if (notification && (await this.shouldSkipViewedNotification(notification))) {
       return;
     }
-
     const data = { ...this.props, notification, ...(bsResponse ?? ({} as S)) };
     return {
       component: this.render(data),
       text: this.renderAsText(data),
+      subject: this.subject(data),
       notification,
     };
+  }
+
+  protected logNotificationSent(notification: Notification, message: string) {
+    Logger.info("email", "Notification sent", {
+      sentAt: new Date().toISOString(),
+      recipientName: notification.user?.name ?? "Unknown recipient",
+      message,
+    });
+  }
+
+  private async shouldSkipViewedNotification(notification: Notification) {
+    if (
+      !notification.documentId ||
+      notification.user?.getPreference(
+        UserPreference.EmailViewedDocumentNotifications
+      )
+    ) {
+      return false;
+    }
+
+    const view = await View.findOne({
+      where: {
+        userId: notification.userId,
+        documentId: notification.documentId,
+        updatedAt: {
+          [Op.gt]: notification.createdAt,
+        },
+      },
+    });
+
+    if (view) {
+      Logger.info(
+        "email",
+        `Email ${this.constructor.name} not sent as document was viewed`,
+        { notificationId: notification.id, userId: notification.userId }
+      );
+    }
+
+    return !!view;
   }
 
   private from(props: S & T): EmailAddress {

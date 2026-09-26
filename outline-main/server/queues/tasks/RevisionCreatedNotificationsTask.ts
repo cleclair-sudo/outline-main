@@ -1,12 +1,9 @@
-import { subHours } from "date-fns";
 import { differenceBy } from "es-toolkit/compat";
-import { Op } from "sequelize";
 import { MentionType, NotificationEventType } from "@shared/types";
 import {
   createSubscriptionsForDocument,
   subscribeUsersToDocument,
 } from "@server/commands/subscriptionCreator";
-import env from "@server/env";
 import Logger from "@server/logging/Logger";
 import {
   Document,
@@ -14,7 +11,6 @@ import {
   Revision,
   Notification,
   User,
-  View,
   GroupUser,
 } from "@server/models";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
@@ -177,75 +173,16 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
     }
 
     for (const recipient of recipients) {
-      const notify = await this.shouldNotify(document, recipient);
-
-      if (notify) {
-        await Notification.create({
-          event: NotificationEventType.UpdateDocument,
-          userId: recipient.id,
-          revisionId: event.modelId,
-          actorId: document.updatedBy.id,
-          teamId: document.teamId,
-          documentId: document.id,
-        });
-      }
+      await Notification.create({
+        event: NotificationEventType.UpdateDocument,
+        userId: recipient.id,
+        revisionId: event.modelId,
+        actorId: document.updatedBy.id,
+        teamId: document.teamId,
+        documentId: document.id,
+      });
     }
   }
-
-  private shouldNotify = async (
-    document: Document,
-    user: User
-  ): Promise<boolean> => {
-    // Create only a single notification in a 6 hour window
-    const notification = await Notification.findOne({
-      order: [["createdAt", "DESC"]],
-      where: {
-        userId: user.id,
-        documentId: document.id,
-        emailedAt: {
-          [Op.not]: null,
-          [Op.gte]: subHours(new Date(), 6),
-        },
-      },
-    });
-
-    if (notification) {
-      if (env.isDevelopment) {
-        Logger.info(
-          "processor",
-          `would have suppressed notification to ${user.id}, but not in development`
-        );
-      } else {
-        Logger.info(
-          "processor",
-          `suppressing notification to ${user.id} as recently notified`
-        );
-        return false;
-      }
-    }
-
-    // If this recipient has viewed the document since the last update was made
-    // then we can avoid sending them a useless notification, yay.
-    const view = await View.findOne({
-      where: {
-        userId: user.id,
-        documentId: document.id,
-        updatedAt: {
-          [Op.gt]: document.updatedAt,
-        },
-      },
-    });
-
-    if (view) {
-      Logger.info(
-        "processor",
-        `suppressing notification to ${user.id} because update viewed`
-      );
-      return false;
-    }
-
-    return true;
-  };
 
   public get options() {
     return {

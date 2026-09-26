@@ -383,6 +383,8 @@ export enum UserPreference {
   BufferEmailNotifications = "bufferEmailNotifications",
   /** The number of minutes to delay buffered email delivery for this user. */
   BufferEmailNotificationsMinutes = "bufferEmailNotificationsMinutes",
+  /** Whether to email notifications even if the user has viewed the document. */
+  EmailViewedDocumentNotifications = "emailViewedDocumentNotifications",
 }
 
 export enum HeadingPrefixStyle {
@@ -428,6 +430,7 @@ export type UserPreferences = {
   [UserPreference.SidebarSectionOrder]?: SidebarSection[];
   [UserPreference.BufferEmailNotifications]?: boolean;
   [UserPreference.BufferEmailNotificationsMinutes]?: number;
+  [UserPreference.EmailViewedDocumentNotifications]?: boolean;
 };
 
 export type SourceMetadata = {
