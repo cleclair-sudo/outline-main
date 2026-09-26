@@ -9,8 +9,8 @@ by starting an Outline service on Elestio and then redirecting the Docker image 
 
 ## Outline Modifications (in testing)
 
-- Added email notification buffer that must be enabled by setting BUFFER=True in the ENV
-- Added email notification delay feature which allows from 5 minutes to 2 hours of delay
+- [in development]Added email notification buffer that must be enabled by setting BUFFER=True in the ENV
+- [in development]Added email notification delay feature which allows from 5 minutes to 2 hours of delay
 - [in development] Developing a "digest" feature to allow for several email updates to fit into one email update
 - removed the "six hour" supress. Users will get updates regardless of if they have gotten  emails in the last six hours or not.
 - added a log to show when emails are sent out for diag
