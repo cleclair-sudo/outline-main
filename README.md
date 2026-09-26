@@ -15,4 +15,5 @@ by starting an Outline service on Elestio and then redirecting the Docker image 
 - removed the "six hour" supress. Users will get updates regardless of if they have gotten  emails in the last six hours or not.
 - added a log to show when emails are sent out for diag
 - Added a user preference to not send email updates if they have seen the update already. By default, users will get email notifications regardless of if they saw it in the wiki or not. They can turn it off in notification settings
+- Remove junk connection messages from debug=info, Set LOG_LEVEL=debug if you ever need to see the connection messages again.
   
