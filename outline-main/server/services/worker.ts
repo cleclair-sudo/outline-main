@@ -203,13 +203,10 @@ export default async function init() {
       Logger.fatal("Error starting taskQueue", err);
     });
 
-  // Schedule the buffered email sender as a repeating task when buffering enabled
+  // Check for due emails every minute so shorter user-selected windows are honored.
   if (env.EMAIL_BUFFERING) {
     try {
-      const windowMinutes =
-        env.EMAIL_BUFFERING_WINDOW_MINUTES ??
-        (env.EMAIL_BUFFERING_WINDOW_HOURS ?? 1) * 60;
-      const cron = getEmailBufferingCron(windowMinutes);
+      const cron = getEmailBufferingCron(1);
       await taskQueue().add(
         {
           name: "BufferedEmailSenderTask",

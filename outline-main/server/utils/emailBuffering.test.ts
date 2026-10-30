@@ -13,6 +13,10 @@ describe("email buffering", () => {
     expect(getEmailBufferingCron(20)).toBe("*/20 * * * *");
   });
 
+  it("supports checking for due emails every minute", () => {
+    expect(getEmailBufferingCron(1)).toBe("*/1 * * * *");
+  });
+
   it("supports legacy hourly overrides", () => {
     expect(getEmailBufferingWindowMinutes({ EMAIL_BUFFERING_WINDOW_HOURS: 3 })).toBe(
       180

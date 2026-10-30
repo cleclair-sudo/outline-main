@@ -413,12 +413,12 @@ export class Environment {
     !!(this.SMTP_HOST || this.SMTP_SERVICE) || this.isDevelopment;
 
   /**
-   * Whether to buffer emails instead of sending immediately. When enabled
+   * Whether to allow user-enabled notification email buffering. When enabled,
    * emails will be stored in Redis and a worker will flush them on a schedule.
    */
   @IsBoolean()
   @IsOptional()
-  public EMAIL_BUFFERING = this.toBoolean(environment.EMAIL_BUFFERING ?? "false");
+  public EMAIL_BUFFERING = this.toBoolean(environment.EMAIL_BUFFERING ?? "true");
 
   /**
    * The buffering window in minutes to batch emails. Defaults to 20 minutes.

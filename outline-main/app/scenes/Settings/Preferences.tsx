@@ -135,6 +135,16 @@ function Preferences() {
       { type: "item", label: t("30 minutes"), value: "30" },
       { type: "item", label: t("1 hour"), value: "60" },
       { type: "item", label: t("2 hours"), value: "120" },
+      { type: "item", label: t("3 hours"), value: "180" },
+      { type: "item", label: t("4 hours"), value: "240" },
+      { type: "item", label: t("5 hours"), value: "300" },
+      { type: "item", label: t("6 hours"), value: "360" },
+      { type: "item", label: t("7 hours"), value: "420" },
+      { type: "item", label: t("8 hours"), value: "480" },
+      { type: "item", label: t("9 hours"), value: "540" },
+      { type: "item", label: t("10 hours"), value: "600" },
+      { type: "item", label: t("11 hours"), value: "660" },
+      { type: "item", label: t("12 hours"), value: "720" },
     ],
     [t]
   );
