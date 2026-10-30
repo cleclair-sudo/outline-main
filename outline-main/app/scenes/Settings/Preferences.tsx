@@ -375,7 +375,7 @@ function Preferences() {
         name={UserPreference.BufferEmailNotifications}
         label={t("Enable digest")}
         description={t(
-          "When enabled, notification emails will be combined into a digest."
+          "Combine your notifications into one email, sent at the timeframe selected below."
         )}
       >
         <Switch
