@@ -79,6 +79,7 @@ export default class BufferedEmailStore {
     return items.map((s) => JSON.parse(s) as BufferedEmailItem);
   }
 
+<<<<<<< HEAD
   static async acknowledge(items: BufferedEmailItem[]) {
     if (!items.length) return;
     await RedisAdapter.defaultClient.zrem(
@@ -120,6 +121,30 @@ export default class BufferedEmailStore {
       PROCESSING_KEY,
       ...args
     );
+=======
+  static async makeDueForRecipient(email: string): Promise<number> {
+    const client = RedisAdapter.defaultClient;
+    const items = await client.zrangebyscore(KEY, "-inf", "+inf");
+    const recipient = email.toLowerCase();
+    const matchingItems = items.filter((serialized) => {
+      const item = JSON.parse(serialized) as BufferedEmailItem;
+      return (
+        typeof item.props.to === "string" &&
+        item.props.to.toLowerCase() === recipient
+      );
+    });
+
+    if (!matchingItems.length) {
+      return 0;
+    }
+
+    const now = Date.now();
+    await client.zadd(
+      KEY,
+      ...matchingItems.flatMap((item) => [now, item])
+    );
+    return matchingItems.length;
+>>>>>>> 428b1c34fce7b4219d45c295bb0b56bf2afcac40
   }
 
   static async count(): Promise<number> {

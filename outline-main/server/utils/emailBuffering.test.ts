@@ -23,4 +23,13 @@ describe("email buffering", () => {
     );
     expect(getEmailBufferingCron(180)).toBe("0 */3 * * *");
   });
+
+  it("prefers an explicitly configured minute window over the legacy hourly value", () => {
+    expect(
+      getEmailBufferingWindowMinutes({
+        EMAIL_BUFFERING_WINDOW_MINUTES: 45,
+        EMAIL_BUFFERING_WINDOW_HOURS: 3,
+      })
+    ).toBe(45);
+  });
 });

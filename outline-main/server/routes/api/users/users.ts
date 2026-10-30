@@ -1,11 +1,16 @@
 import Router from "koa-router";
 import type { WhereOptions } from "sequelize";
 import { Op, Sequelize } from "sequelize";
-import { NotificationEventType, UserRole } from "@shared/types";
+import {
+  NotificationEventType,
+  UserPreference,
+  UserRole,
+} from "@shared/types";
 import { UserRoleHelper } from "@shared/utils/UserRoleHelper";
 import { settingsPath } from "@shared/utils/routeHelpers";
 import { UserValidation } from "@shared/validations";
 import userInviter from "@server/commands/userInviter";
+import BufferedEmailStore from "@server/emails/BufferedEmailStore";
 import ConfirmUpdateEmail from "@server/emails/templates/ConfirmUpdateEmail";
 import ConfirmUserDeleteEmail from "@server/emails/templates/ConfirmUserDeleteEmail";
 import InviteEmail from "@server/emails/templates/InviteEmail";
@@ -24,6 +29,7 @@ import {
   legacyUserParamsToFilter,
 } from "@server/models/helpers/Filters";
 import { UserFlag } from "@server/models/User";
+import { taskQueue } from "@server/queues";
 import { can, authorize } from "@server/policies";
 import { presentUser, presentPolicies } from "@server/presenters";
 import type { APIContext } from "@server/types";
@@ -272,6 +278,9 @@ router.post(
     }
     authorize(actor, "update", user);
     const includeDetails = !!can(actor, "readDetails", user);
+    const wasBufferingNotificationsEnabled = user.getPreference(
+      UserPreference.BufferEmailNotifications
+    );
 
     if (name) {
       user.name = name;
@@ -297,6 +306,23 @@ router.post(
     }
 
     await user.saveWithCtx(ctx);
+
+    if (
+      wasBufferingNotificationsEnabled &&
+      !user.getPreference(UserPreference.BufferEmailNotifications)
+    ) {
+      await transaction.afterCommit(async () => {
+        const releasedItems = await BufferedEmailStore.makeDueForRecipient(
+          user.email
+        );
+        if (releasedItems > 0) {
+          await taskQueue().add({
+            name: "BufferedEmailSenderTask",
+            props: {},
+          });
+        }
+      });
+    }
 
     ctx.body = {
       data: presentUser(user, {
