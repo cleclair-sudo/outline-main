@@ -165,7 +165,7 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
       await NotificationHelper.getDocumentNotificationRecipients({
         document,
         notificationType: NotificationEventType.UpdateDocument,
-        actorId: document.lastModifiedById,
+        actorId: revision.userId,
       })
     ).filter((recipient) => !userIdsMentioned.includes(recipient.id));
     if (!recipients.length) {
@@ -177,7 +177,7 @@ export default class RevisionCreatedNotificationsTask extends BaseTask<RevisionE
         event: NotificationEventType.UpdateDocument,
         userId: recipient.id,
         revisionId: event.modelId,
-        actorId: document.updatedBy.id,
+        actorId: revision.userId,
         teamId: document.teamId,
         documentId: document.id,
       });

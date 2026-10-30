@@ -1,11 +1,15 @@
 import { BaseTask } from "./base/BaseTask";
-import BufferedEmailStore from "@server/emails/BufferedEmailStore";
+import BufferedEmailStore, {
+  type BufferedEmailItem,
+} from "@server/emails/BufferedEmailStore";
 import emails from "@server/emails/templates";
 import DigestEmail from "@server/emails/templates/DigestEmail";
 import Logger from "@server/logging/Logger";
 import { groupBufferedEmailItems } from "@server/utils/emailDigest";
 
 type Props = {};
+
+const RETRY_DELAY_MS = 60 * 1000;
 
 export default class BufferedEmailSenderTask extends BaseTask<Props> {
   // Use default options from BaseTask
@@ -34,9 +38,19 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
     for (const group of groups) {
       try {
         const first = group[0];
-        if (!first || typeof first.props.to !== "string") {
+        if (
+          !first ||
+          typeof first.props.to !== "string" ||
+          !first.props.to.trim()
+        ) {
+          Logger.error(
+            "Discarding buffered email digest without a recipient address",
+            group
+          );
+          await BufferedEmailStore.acknowledge(group);
           continue;
         }
+        await BufferedEmailStore.extendLease(group);
         const email = new DigestEmail({
           to: first.props.to,
           language:
@@ -46,25 +60,38 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
           items: group,
         });
         await email.send();
+        await BufferedEmailStore.acknowledge(group);
       } catch (err) {
         Logger.error("Failed to send buffered email digest", err, group);
+        await this.retry(group);
       }
     }
 
     for (const item of otherItems) {
       try {
+        await BufferedEmailStore.extendLease([item]);
         const EmailClass = (emails as any)[item.templateName];
         if (!EmailClass) {
           Logger.error(`Buffered email template not found: ${item.templateName}`);
+          await BufferedEmailStore.acknowledge([item]);
           continue;
         }
 
         // @ts-expect-error - instantiate concrete email class
         const email = new EmailClass(item.props, item.metadata);
         await email.send();
+        await BufferedEmailStore.acknowledge([item]);
       } catch (err) {
         Logger.error("Failed to send buffered email", err, item);
+        await this.retry([item]);
       }
     }
+  }
+
+  private async retry(items: BufferedEmailItem[]) {
+    await BufferedEmailStore.reschedule(
+      items,
+      Date.now() + RETRY_DELAY_MS
+    );
   }
 }

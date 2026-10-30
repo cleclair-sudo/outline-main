@@ -226,7 +226,9 @@ class Notification extends Model<
     };
 
     if (options.transaction) {
-      options.transaction.afterCommit(() => void Event.schedule(params));
+      (options.transaction.parent || options.transaction).afterCommit(() =>
+        Event.schedule(params)
+      );
       return;
     }
     await Event.schedule(params);

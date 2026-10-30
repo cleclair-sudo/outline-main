@@ -54,6 +54,7 @@ type EmailTags = {
 })
 export class Mailer {
   transporter: Transporter | undefined;
+  private testTransporterPromise?: Promise<void>;
 
   constructor() {
     if (env.SMTP_HOST || env.SMTP_SERVICE) {
@@ -65,17 +66,19 @@ export class Mailer {
         "SMTP_USERNAME not provided, generating test account…"
       );
 
-      void this.getTestTransportOptions().then((options) => {
-        if (!options) {
-          Logger.info(
-            "email",
-            "Couldn't generate a test account with ethereal.email at this time – emails will not be sent."
-          );
-          return;
-        }
+      this.testTransporterPromise = this.getTestTransportOptions().then(
+        (options) => {
+          if (!options) {
+            Logger.info(
+              "email",
+              "Couldn't generate a test account with ethereal.email at this time – emails will not be sent."
+            );
+            return;
+          }
 
-        this.transporter = nodemailer.createTransport(options);
-      });
+          this.transporter = nodemailer.createTransport(options);
+        }
+      );
     }
   }
 
@@ -144,6 +147,7 @@ export class Mailer {
    * @returns Message ID header from SMTP server
    */
   sendMail = async (data: SendMailOptions): Promise<void> => {
+    await this.testTransporterPromise;
     const transporter = this.transporter;
 
     if (env.isDevelopment) {
@@ -164,8 +168,11 @@ export class Mailer {
       );
     }
     if (!transporter) {
-      Logger.warn("No mail transport available");
-      return;
+      const error = new Error(
+        "No mail transport available; configure SMTP_HOST or SMTP_SERVICE"
+      );
+      Logger.error(error.message);
+      throw error;
     }
 
     const html = Oy.renderTemplate(
@@ -209,6 +216,10 @@ export class Mailer {
               },
             ],
       });
+
+      if (Array.isArray(info.rejected) && info.rejected.length > 0) {
+        throw new Error("SMTP rejected one or more email recipients");
+      }
 
       if (useTestEmailService) {
         Logger.info(

@@ -227,8 +227,11 @@ class Revision extends ParanoidModel<
     return (this.constructor as typeof Revision).findOne({
       where: {
         documentId: this.documentId,
+        id: {
+          [Op.ne]: this.id,
+        },
         createdAt: {
-          [Op.lt]: this.createdAt,
+          [Op.lte]: this.createdAt,
         },
       },
       order: [["createdAt", "DESC"]],
