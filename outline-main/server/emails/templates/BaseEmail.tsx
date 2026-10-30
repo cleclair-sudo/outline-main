@@ -151,7 +151,7 @@ export default abstract class BaseEmail<
           const msWindow = windowMinutes * 60 * 1000;
           const scheduledAt = Date.now() + msWindow;
 
-          void BufferedEmailStore.add({
+          await BufferedEmailStore.add({
             templateName,
             props: this.props as Record<string, unknown>,
             metadata: this.metadata as Record<string, unknown> | undefined,
