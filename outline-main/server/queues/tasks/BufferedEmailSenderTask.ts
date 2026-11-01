@@ -70,21 +70,25 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
               )
             ),
             intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
-            intervalEndsAt: Array.from(
+            digestSlotAt: Array.from(
               new Set(
                 group
                   .map(
                     (item) =>
-                      item.digestIntervalEndsAt ?? item.scheduledAt
+                      item.digestSlotAt ??
+                      item.digestIntervalEndsAt ??
+                      item.scheduledAt
                   )
                   .map((timestamp) => new Date(timestamp).toISOString())
               )
             ),
-            intervalEndsAtEastern: Array.from(
+            digestSlotAtEastern: Array.from(
               new Set(
                 group.map((item) =>
                   formatEmailDigestTime(
-                    item.digestIntervalEndsAt ?? item.scheduledAt
+                    item.digestSlotAt ??
+                      item.digestIntervalEndsAt ??
+                      item.scheduledAt
                   )
                 )
               )
@@ -130,11 +134,15 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
             templateName: item.templateName,
             digestIntervalMinutes: item.digestIntervalMinutes,
             intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
-            intervalEndsAt: new Date(
-              item.digestIntervalEndsAt ?? item.scheduledAt
+            digestSlotAt: new Date(
+              item.digestSlotAt ??
+                item.digestIntervalEndsAt ??
+                item.scheduledAt
             ).toISOString(),
-            intervalEndsAtEastern: formatEmailDigestTime(
-              item.digestIntervalEndsAt ?? item.scheduledAt
+            digestSlotAtEastern: formatEmailDigestTime(
+              item.digestSlotAt ??
+                item.digestIntervalEndsAt ??
+                item.scheduledAt
             ),
             sendAfterAt: new Date(item.scheduledAt).toISOString(),
             scheduledFor: new Date(item.scheduledAt).toISOString(),

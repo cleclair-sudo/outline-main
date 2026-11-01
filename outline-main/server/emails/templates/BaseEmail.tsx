@@ -30,9 +30,8 @@ import { TaskPriority } from "@server/queues/tasks/base/BaseTask";
 import type { NotificationMetadata } from "@server/types";
 import {
   EMAIL_DIGEST_TIME_ZONE,
+  getEmailDigestSchedule,
   formatEmailDigestTime,
-  getEmailBufferingWindowMinutes,
-  getEmailDigestInterval,
 } from "@server/utils/emailBuffering";
 
 export enum EmailMessageCategory {
@@ -143,33 +142,29 @@ export default abstract class BaseEmail<
           }
         }
 
-        if (shouldBuffer && user) {
-          const userBufferMinutes = user.getPreference(
-            UserPreference.BufferEmailNotificationsMinutes
-          );
-          const windowMinutes = getEmailBufferingWindowMinutes({
-            EMAIL_BUFFERING_WINDOW_MINUTES:
-              env.EMAIL_BUFFERING_WINDOW_MINUTES,
-            EMAIL_BUFFERING_WINDOW_HOURS: env.EMAIL_BUFFERING_WINDOW_HOURS,
-            userBufferMinutes,
-          });
-          const interval = getEmailDigestInterval(
-            notification?.createdAt.getTime() ?? Date.now(),
-            windowMinutes
-          );
+        const selectedTimes =
+          user?.getPreference(UserPreference.BufferEmailNotificationsTimes) ??
+          [];
+        const schedule =
+          shouldBuffer && user
+            ? getEmailDigestSchedule(
+                notification?.createdAt.getTime() ?? Date.now(),
+                selectedTimes
+              )
+            : undefined;
 
+        if (schedule && user) {
           await BufferedEmailStore.add({
             templateName,
             props: this.props as Record<string, unknown>,
             metadata: this.metadata as Record<string, unknown> | undefined,
-            scheduledAt: interval.sendAt,
-            digestIntervalMinutes: windowMinutes,
-            digestIntervalEndsAt: interval.endAt,
+            scheduledAt: schedule.sendAt,
+            digestSlotAt: schedule.slotAt,
           });
 
           Logger.info(
             "email",
-            "Buffered email queued for digest interval",
+            "Buffered email queued for digest time",
             {
               templateName,
               userId: user.id,
@@ -177,15 +172,12 @@ export default abstract class BaseEmail<
               notificationEvent: notification?.event,
               notificationCreatedAt:
                 notification?.createdAt.toISOString(),
-              digestIntervalMinutes: windowMinutes,
-              intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
-              intervalStartAt: new Date(interval.startAt).toISOString(),
-              intervalStartAtEastern: formatEmailDigestTime(interval.startAt),
-              intervalEndAt: new Date(interval.endAt).toISOString(),
-              intervalEndAtEastern: formatEmailDigestTime(interval.endAt),
-              scheduledFor: new Date(interval.sendAt).toISOString(),
-              scheduledForEastern: formatEmailDigestTime(interval.sendAt),
-              sendAfterAt: new Date(interval.sendAt).toISOString(),
+              digestTimeZone: EMAIL_DIGEST_TIME_ZONE,
+              digestSlotAt: new Date(schedule.slotAt).toISOString(),
+              digestSlotAtEastern: formatEmailDigestTime(schedule.slotAt),
+              scheduledFor: new Date(schedule.sendAt).toISOString(),
+              scheduledForEastern: formatEmailDigestTime(schedule.sendAt),
+              sendAfterAt: new Date(schedule.sendAt).toISOString(),
               settlingDelayMinutes: 10,
               queued: true,
             }
@@ -197,7 +189,7 @@ export default abstract class BaseEmail<
 
         Logger.info(
           "email",
-          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}`
+          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}; selectedDigestTimes=${selectedTimes.length}`
         );
       } catch (err) {
         Logger.error("Failed to buffer email (preference check)", err);

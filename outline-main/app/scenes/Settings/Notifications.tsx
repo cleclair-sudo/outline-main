@@ -19,10 +19,9 @@ import {
 import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
+import styled from "styled-components";
 import { NotificationEventType, UserPreference } from "@shared/types";
 import Heading from "~/components/Heading";
-import type { Option } from "~/components/InputSelect";
-import { InputSelect } from "~/components/InputSelect";
 import Notice from "~/components/Notice";
 import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
@@ -35,6 +34,8 @@ import SettingRow from "./components/SettingRow";
 function Notifications() {
   const user = useCurrentUser();
   const { t } = useTranslation();
+  const digestTimes =
+    user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? [];
 
   const options = [
     {
@@ -182,43 +183,57 @@ function Notifications() {
 
   const handleBufferEmailNotificationsChange = React.useCallback(
     async (checked: boolean) => {
+      if (
+        checked &&
+        !user.getPreference(UserPreference.BufferEmailNotificationsTimes)
+          ?.length
+      ) {
+        toast.error(t("Choose at least one digest time before enabling digests."));
+        return;
+      }
+
       user.setPreference(UserPreference.BufferEmailNotifications, checked);
       await user.save();
       showSuccessMessage();
     },
-    [user, showSuccessMessage]
+    [user, showSuccessMessage, t]
   );
 
-  const bufferMinutesOptions: Option[] = React.useMemo(
+  const digestTimeOptions = React.useMemo(
     () =>
-      [
-        { type: "item", label: t("5 minutes"), value: "5" },
-        { type: "item", label: t("10 minutes"), value: "10" },
-        { type: "item", label: t("20 minutes"), value: "20" },
-        { type: "item", label: t("30 minutes"), value: "30" },
-        { type: "item", label: t("1 hour"), value: "60" },
-        { type: "item", label: t("2 hours"), value: "120" },
-        { type: "item", label: t("3 hours"), value: "180" },
-        { type: "item", label: t("4 hours"), value: "240" },
-        { type: "item", label: t("5 hours"), value: "300" },
-        { type: "item", label: t("6 hours"), value: "360" },
-        { type: "item", label: t("7 hours"), value: "420" },
-        { type: "item", label: t("8 hours"), value: "480" },
-        { type: "item", label: t("9 hours"), value: "540" },
-        { type: "item", label: t("10 hours"), value: "600" },
-        { type: "item", label: t("11 hours"), value: "660" },
-        { type: "item", label: t("12 hours"), value: "720" },
-        { type: "item", label: t("48 hours"), value: "2880" },
-      ] satisfies Option[],
-    [t]
+      Array.from({ length: 48 }, (_, index) => {
+        const minutes = index * 30;
+        const label = new Intl.DateTimeFormat(undefined, {
+          timeZone: "UTC",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(Date.UTC(2020, 0, 1, 0, minutes)));
+        return { minutes, label };
+      }),
+    []
   );
 
-  const handleBufferEmailNotificationsMinutesChange = React.useCallback(
-    async (value: string) => {
-      user.setPreference(
-        UserPreference.BufferEmailNotificationsMinutes,
-        Number(value)
+  const handleDigestTimeChange = React.useCallback(
+    async (minutes: number, checked: boolean) => {
+      const selectedTimes = new Set(
+        user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? []
       );
+      const hadSelectedTimes = selectedTimes.size > 0;
+      if (checked) {
+        selectedTimes.add(minutes);
+      } else {
+        selectedTimes.delete(minutes);
+      }
+      const selectedTimeValues = Array.from(selectedTimes).sort(
+        (a, b) => a - b
+      );
+      user.setPreference(
+        UserPreference.BufferEmailNotificationsTimes,
+        selectedTimeValues
+      );
+      if (!hadSelectedTimes || !selectedTimeValues.length) {
+        user.setPreference(UserPreference.BufferEmailNotifications, false);
+      }
       await user.save();
       showSuccessMessage();
     },
@@ -296,34 +311,48 @@ function Notifications() {
 
       <Heading as="h2">{t("Email digest")}</Heading>
       <SettingRow
-        name={UserPreference.BufferEmailNotifications}
-        label={t("Enable periodic digest")}
+        name={UserPreference.BufferEmailNotificationsTimes}
+        label={t("Digest delivery times")}
         description={t(
-          "Digests follow repeating Eastern Time boundaries, so your first digest may arrive sooner than the selected interval. Digests are sent about 10 minutes after each interval ends to group delayed notifications; empty intervals are skipped."
+          "Choose any number of 30-minute send times in Eastern Time. With digests turned off, notification emails are sent right away."
+        )}
+      >
+        <DigestTimesGrid>
+          {digestTimeOptions.map(({ minutes, label }) => (
+            <DigestTimeOption key={minutes}>
+              <input
+                type="checkbox"
+                name={UserPreference.BufferEmailNotificationsTimes}
+                value={minutes}
+                checked={digestTimes.includes(minutes)}
+                aria-label={label}
+                onChange={(event) =>
+                  handleDigestTimeChange(minutes, event.target.checked)
+                }
+              />
+              {label}
+            </DigestTimeOption>
+          ))}
+        </DigestTimesGrid>
+      </SettingRow>
+      <SettingRow
+        name={UserPreference.BufferEmailNotifications}
+        label={t("Enable email digest")}
+        description={t(
+          digestTimes.length
+            ? "When enabled, notifications are grouped for the next selected time and sent about 10 minutes later to allow delayed jobs to arrive."
+            : "Select at least one delivery time before enabling digests. Until then, notification emails are sent right away."
         )}
         compact
       >
         <Switch
           id={UserPreference.BufferEmailNotifications}
           name={UserPreference.BufferEmailNotifications}
-          checked={!!user.getPreference(UserPreference.BufferEmailNotifications)}
+          checked={
+            !!user.getPreference(UserPreference.BufferEmailNotifications) &&
+            digestTimes.length > 0
+          }
           onChange={handleBufferEmailNotificationsChange}
-        />
-      </SettingRow>
-      <SettingRow
-        name={UserPreference.BufferEmailNotificationsMinutes}
-        label={t("Digest interval")}
-        compact
-      >
-        <InputSelect
-          options={bufferMinutesOptions}
-          value={String(
-            user.getPreference(UserPreference.BufferEmailNotificationsMinutes)
-          )}
-          onChange={handleBufferEmailNotificationsMinutesChange}
-          label={t("Digest interval")}
-          labelHidden
-          disabled={!user.getPreference(UserPreference.BufferEmailNotifications)}
         />
       </SettingRow>
 
@@ -358,3 +387,24 @@ function Notifications() {
 }
 
 export default observer(Notifications);
+
+const DigestTimesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+`;
+
+const DigestTimeOption = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+`;

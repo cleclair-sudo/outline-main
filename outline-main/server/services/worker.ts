@@ -206,7 +206,7 @@ export default async function init() {
   // Check for due emails every minute so shorter user-selected windows are honored.
   if (env.EMAIL_BUFFERING) {
     try {
-      const cron = getEmailBufferingCron(1);
+      const cron = getEmailBufferingCron();
       await taskQueue().add(
         {
           name: "BufferedEmailSenderTask",

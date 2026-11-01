@@ -381,7 +381,9 @@ export enum UserPreference {
   SidebarSectionOrder = "sidebarSectionOrder",
   /** Whether the user wants email notifications buffered and sent on a schedule. */
   BufferEmailNotifications = "bufferEmailNotifications",
-  /** The number of minutes to delay buffered email delivery for this user. */
+  /** Eastern Time slots when buffered notification digests should be sent. */
+  BufferEmailNotificationsTimes = "bufferEmailNotificationsTimes",
+  /** @deprecated Replaced by BufferEmailNotificationsTimes. */
   BufferEmailNotificationsMinutes = "bufferEmailNotificationsMinutes",
   /** Whether to email notifications even if the user has viewed the document. */
   EmailViewedDocumentNotifications = "emailViewedDocumentNotifications",
@@ -429,6 +431,7 @@ export type UserPreferences = {
   [UserPreference.NotificationBadge]?: NotificationBadgeType;
   [UserPreference.SidebarSectionOrder]?: SidebarSection[];
   [UserPreference.BufferEmailNotifications]?: boolean;
+  [UserPreference.BufferEmailNotificationsTimes]?: number[];
   [UserPreference.BufferEmailNotificationsMinutes]?: number;
   [UserPreference.EmailViewedDocumentNotifications]?: boolean;
 };

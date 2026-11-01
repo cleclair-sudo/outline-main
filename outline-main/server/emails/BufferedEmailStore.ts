@@ -62,6 +62,7 @@ export interface BufferedEmailItem {
   props: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   scheduledAt: number;
+  digestSlotAt?: number;
   digestIntervalMinutes?: number;
   digestIntervalEndsAt?: number;
 }

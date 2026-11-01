@@ -130,6 +130,17 @@ export const UsersUpdateSchema = BaseSchema.extend({
         [UserPreference.NotificationBadge]: z.enum(NotificationBadgeType),
         [UserPreference.SidebarSectionOrder]: z.array(z.enum(SidebarSection)),
         [UserPreference.BufferEmailNotifications]: z.boolean(),
+        [UserPreference.BufferEmailNotificationsTimes]: z
+          .array(
+            z
+              .number()
+              .int()
+              .min(0)
+              .max(23 * 60 + 30)
+              .refine((minutes) => minutes % 30 === 0)
+          )
+          .max(48)
+          .refine((times) => new Set(times).size === times.length),
         [UserPreference.BufferEmailNotificationsMinutes]: z
           .number()
           .int()

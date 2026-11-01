@@ -45,4 +45,16 @@ describe("email digest", () => {
       groupBufferedEmailItems(sameIntervalItems).map((group) => group.length)
     ).toEqual([2, 1]);
   });
+
+  it("groups new queue items by selected time slot", () => {
+    const firstSlot = Date.parse("2026-11-01T10:00:00Z");
+    const secondSlot = Date.parse("2026-11-01T17:00:00Z");
+    expect(
+      groupBufferedEmailItems([
+        { ...item("user@example.com"), digestSlotAt: firstSlot },
+        { ...item("user@example.com"), digestSlotAt: firstSlot },
+        { ...item("user@example.com"), digestSlotAt: secondSlot },
+      ]).map((group) => group.length)
+    ).toEqual([2, 1]);
+  });
 });

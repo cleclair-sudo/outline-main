@@ -8,8 +8,9 @@ export function groupBufferedEmailItems(
   for (const item of items) {
     const to = typeof item.props.to === "string" ? item.props.to : "";
     const language = typeof item.props.language === "string" ? item.props.language : "";
-    const intervalEnd = item.digestIntervalEndsAt ?? item.scheduledAt;
-    const key = `${to.toLowerCase()}\0${language}\0${intervalEnd}`;
+    const digestSlot =
+      item.digestSlotAt ?? item.digestIntervalEndsAt ?? item.scheduledAt;
+    const key = `${to.toLowerCase()}\0${language}\0${digestSlot}`;
     const group = groups.get(key) ?? [];
     group.push(item);
     groups.set(key, group);

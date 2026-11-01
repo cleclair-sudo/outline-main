@@ -421,23 +421,6 @@ export class Environment {
   public EMAIL_BUFFERING = this.toBoolean(environment.EMAIL_BUFFERING ?? "true");
 
   /**
-   * The buffering window in minutes to batch emails. Defaults to 20 minutes.
-   */
-  @IsNumber()
-  @IsOptional()
-  public EMAIL_BUFFERING_WINDOW_MINUTES =
-    this.toOptionalNumber(environment.EMAIL_BUFFERING_WINDOW_MINUTES);
-
-  /**
-   * Legacy hourly override retained for compatibility. The scheduler now uses a
-   * minute-based flush interval, but older deployments may still provide hours.
-   */
-  @IsNumber()
-  @IsOptional()
-  public EMAIL_BUFFERING_WINDOW_HOURS =
-    this.toOptionalNumber(environment.EMAIL_BUFFERING_WINDOW_HOURS);
-
-  /**
    * Optional hostname of the client, used for identifying to the server
    * defaults to hostname of the machine.
    */

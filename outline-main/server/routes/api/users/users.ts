@@ -296,10 +296,22 @@ router.post(
       user.language = language;
     }
     if (preferences) {
-      user.preferences = {
+      const updatedPreferences = {
         ...user.preferences,
         ...preferences,
       };
+      if (
+        !updatedPreferences[UserPreference.BufferEmailNotificationsTimes]
+          ?.length
+      ) {
+        if (preferences[UserPreference.BufferEmailNotifications] === true) {
+          throw ValidationError(
+            "Choose at least one digest time before enabling digests"
+          );
+        }
+        updatedPreferences[UserPreference.BufferEmailNotifications] = false;
+      }
+      user.preferences = updatedPreferences;
     }
     if (timezone) {
       user.timezone = timezone;
