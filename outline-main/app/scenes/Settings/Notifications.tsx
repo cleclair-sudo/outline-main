@@ -207,20 +207,6 @@ function Notifications() {
     [user, showSuccessMessage]
   );
 
-  const handleBufferEmailNotificationsChange = React.useCallback(
-    async (checked: boolean) => {
-      if (checked && !digestTimes.length) {
-        toast.error(t("Choose at least one digest time before enabling digests."));
-        return;
-      }
-
-      user.setPreference(UserPreference.BufferEmailNotifications, checked);
-      await user.save();
-      showSuccessMessage();
-    },
-    [user, showSuccessMessage, t, digestTimes.length]
-  );
-
   const digestTimeOptions = React.useMemo(
     () =>
       Array.from(
@@ -251,7 +237,6 @@ function Notifications() {
             selectedMinutes % EMAIL_DIGEST_STEP_MINUTES === 0
         )
       );
-      const hadSelectedTimes = selectedTimes.size > 0;
       if (checked) {
         selectedTimes.add(minutes);
       } else {
@@ -264,9 +249,10 @@ function Notifications() {
         UserPreference.BufferEmailNotificationsTimes,
         selectedTimeValues
       );
-      if (!hadSelectedTimes || !selectedTimeValues.length) {
-        user.setPreference(UserPreference.BufferEmailNotifications, false);
-      }
+      user.setPreference(
+        UserPreference.BufferEmailNotifications,
+        selectedTimeValues.length > 0
+      );
       await user.save();
       showSuccessMessage();
     },
@@ -347,7 +333,7 @@ function Notifications() {
         name={UserPreference.BufferEmailNotificationsTimes}
         label={t("Digest delivery times")}
         description={t(
-          "Choose one or more times from 9:00 AM to 8:00 PM Eastern Time. With digests turned off, notification emails are sent right away."
+          "Choose one or more times from 9:00 AM to 8:00 PM Eastern Time. Selecting a time enables digests; clearing all times sends notification emails right away."
         )}
       >
         <MenuProvider variant="dropdown">
@@ -392,26 +378,6 @@ function Notifications() {
             </MenuContent>
           </Menu>
         </MenuProvider>
-      </SettingRow>
-      <SettingRow
-        name={UserPreference.BufferEmailNotifications}
-        label={t("Enable email digest")}
-        description={t(
-          digestTimes.length
-            ? "When enabled, notifications are grouped for the next selected time and sent about 10 minutes later to allow delayed jobs to arrive."
-            : "Select at least one delivery time before enabling digests. Until then, notification emails are sent right away."
-        )}
-        compact
-      >
-        <Switch
-          id={UserPreference.BufferEmailNotifications}
-          name={UserPreference.BufferEmailNotifications}
-          checked={
-            !!user.getPreference(UserPreference.BufferEmailNotifications) &&
-            digestTimes.length > 0
-          }
-          onChange={handleBufferEmailNotificationsChange}
-        />
       </SettingRow>
 
       {options.map((option) => {

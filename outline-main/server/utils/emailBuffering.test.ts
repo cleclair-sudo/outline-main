@@ -4,7 +4,6 @@ import {
   EMAIL_DIGEST_START_MINUTES,
 } from "@shared/constants";
 import {
-  EMAIL_DIGEST_SETTLE_DELAY_MS,
   formatEmailDigestTime,
   getEmailBufferingCron,
   getEmailDigestSchedule,
@@ -40,22 +39,19 @@ describe("email buffering", () => {
     );
   });
 
-  it("adds the settling delay after the selected time", () => {
+  it("schedules delivery for the selected time", () => {
     const now = Date.parse("2024-01-15T12:30:00Z");
     expect(getEmailDigestSchedule(now, [540])).toEqual({
       slotAt: Date.parse("2024-01-15T14:00:00Z"),
-      sendAt:
-        Date.parse("2024-01-15T14:00:00Z") +
-        EMAIL_DIGEST_SETTLE_DELAY_MS,
+      sendAt: Date.parse("2024-01-15T14:00:00Z"),
     });
   });
 
-  it("includes notifications created during the settling window", () => {
+  it("assigns notifications created after a slot to the next selected time", () => {
     const now = Date.parse("2024-01-15T14:05:00Z");
     expect(getEmailDigestSchedule(now, [540])).toEqual({
-      slotAt: Date.parse("2024-01-15T14:00:00Z"),
-      sendAt: Date.parse("2024-01-15T14:00:00Z") +
-        EMAIL_DIGEST_SETTLE_DELAY_MS,
+      slotAt: Date.parse("2024-01-16T14:00:00Z"),
+      sendAt: Date.parse("2024-01-16T14:00:00Z"),
     });
   });
 

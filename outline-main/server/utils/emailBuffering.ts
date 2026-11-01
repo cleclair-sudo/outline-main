@@ -7,7 +7,6 @@ import {
 export const EMAIL_DIGEST_TIME_ZONE = "America/New_York";
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
-export const EMAIL_DIGEST_SETTLE_DELAY_MS = 10 * MINUTE_MS;
 const EASTERN_OFFSET_LOOKAROUND_MS = 2 * DAY_MS;
 const easternDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: EMAIL_DIGEST_TIME_ZONE,
@@ -120,18 +119,12 @@ export function getEmailDigestSchedule(
   now: number,
   selectedTimes: readonly number[]
 ): { slotAt: number; sendAt: number } | undefined {
-  const slotAt = getNextEmailDigestAt(
-    now - EMAIL_DIGEST_SETTLE_DELAY_MS,
-    selectedTimes
-  );
+  const slotAt = getNextEmailDigestAt(now, selectedTimes);
   if (slotAt === undefined) {
     return undefined;
   }
 
-  return {
-    slotAt,
-    sendAt: slotAt + EMAIL_DIGEST_SETTLE_DELAY_MS,
-  };
+  return { slotAt, sendAt: slotAt };
 }
 
 export function getEmailBufferingCron(): string {

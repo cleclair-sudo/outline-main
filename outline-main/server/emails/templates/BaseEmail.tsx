@@ -127,24 +127,16 @@ export default abstract class BaseEmail<
       templateName,
     });
 
-    // If buffering is enabled globally, check the recipient user's preference
+    // When buffering is enabled globally, selected user digest times control
+    // whether notification emails are queued for a digest.
     if (env.EMAIL_BUFFERING) {
       try {
-        let shouldBuffer = false;
         let user: User | null = notification?.user ?? null;
-
-        // Prefer the notification's user when available in metadata
-        if (user) {
-          shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
-        }
 
         // Fall back to finding a user by the recipient email address
         if (!user && (this.props as any)?.to) {
           const to = (this.props as any).to as string;
           user = await User.findOne({ where: { email: to?.toLowerCase() } });
-          if (user) {
-            shouldBuffer = user.getPreference(UserPreference.BufferEmailNotifications);
-          }
         }
 
         const selectedTimes =
@@ -157,7 +149,7 @@ export default abstract class BaseEmail<
             minutes % EMAIL_DIGEST_STEP_MINUTES === 0
         );
         const schedule =
-          shouldBuffer && user
+          validSelectedTimes.length > 0 && user
             ? getEmailDigestSchedule(
                 notification?.createdAt.getTime() ?? Date.now(),
                 validSelectedTimes
@@ -189,7 +181,6 @@ export default abstract class BaseEmail<
               scheduledFor: new Date(schedule.sendAt).toISOString(),
               scheduledForEastern: formatEmailDigestTime(schedule.sendAt),
               sendAfterAt: new Date(schedule.sendAt).toISOString(),
-              settlingDelayMinutes: 10,
               queued: true,
             }
           );
@@ -200,7 +191,7 @@ export default abstract class BaseEmail<
 
         Logger.info(
           "email",
-          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}; selectedDigestTimes=${validSelectedTimes.length}`
+          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; selectedDigestTimes=${validSelectedTimes.length}`
         );
       } catch (err) {
         Logger.error("Failed to buffer email (preference check)", err);

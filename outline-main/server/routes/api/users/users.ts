@@ -314,16 +314,8 @@ router.post(
         ) ?? [];
       updatedPreferences[UserPreference.BufferEmailNotificationsTimes] =
         digestTimes;
-      if (
-        !digestTimes.length
-      ) {
-        if (preferences[UserPreference.BufferEmailNotifications] === true) {
-          throw ValidationError(
-            "Choose at least one digest time before enabling digests"
-          );
-        }
-        updatedPreferences[UserPreference.BufferEmailNotifications] = false;
-      }
+      updatedPreferences[UserPreference.BufferEmailNotifications] =
+        digestTimes.length > 0;
       user.preferences = updatedPreferences;
     }
     if (timezone) {
