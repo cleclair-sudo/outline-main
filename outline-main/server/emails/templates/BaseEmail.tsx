@@ -19,6 +19,11 @@ import Metrics from "@server/logging/Metrics";
 import BufferedEmailStore from "@server/emails/BufferedEmailStore";
 import { Revision, User, View } from "@server/models";
 import { UserPreference } from "@shared/types";
+import {
+  EMAIL_DIGEST_END_MINUTES,
+  EMAIL_DIGEST_START_MINUTES,
+  EMAIL_DIGEST_STEP_MINUTES,
+} from "@shared/constants";
 import type { Team } from "@server/models";
 import Notification from "@server/models/Notification";
 import { DocumentHelper } from "@server/models/helpers/DocumentHelper";
@@ -145,11 +150,17 @@ export default abstract class BaseEmail<
         const selectedTimes =
           user?.getPreference(UserPreference.BufferEmailNotificationsTimes) ??
           [];
+        const validSelectedTimes = selectedTimes.filter(
+          (minutes) =>
+            minutes >= EMAIL_DIGEST_START_MINUTES &&
+            minutes <= EMAIL_DIGEST_END_MINUTES &&
+            minutes % EMAIL_DIGEST_STEP_MINUTES === 0
+        );
         const schedule =
           shouldBuffer && user
             ? getEmailDigestSchedule(
                 notification?.createdAt.getTime() ?? Date.now(),
-                selectedTimes
+                validSelectedTimes
               )
             : undefined;
 
@@ -189,7 +200,7 @@ export default abstract class BaseEmail<
 
         Logger.info(
           "email",
-          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}; selectedDigestTimes=${selectedTimes.length}`
+          `Email ${templateName} not buffered for user ${user?.id ?? "unknown"}; env.EMAIL_BUFFERING=${env.EMAIL_BUFFERING}; shouldBuffer=${shouldBuffer}; selectedDigestTimes=${validSelectedTimes.length}`
         );
       } catch (err) {
         Logger.error("Failed to buffer email (preference check)", err);

@@ -6,6 +6,11 @@ import {
   UserPreference,
   UserRole,
 } from "@shared/types";
+import {
+  EMAIL_DIGEST_END_MINUTES,
+  EMAIL_DIGEST_START_MINUTES,
+  EMAIL_DIGEST_STEP_MINUTES,
+} from "@shared/constants";
 import { UserRoleHelper } from "@shared/utils/UserRoleHelper";
 import { settingsPath } from "@shared/utils/routeHelpers";
 import { UserValidation } from "@shared/validations";
@@ -300,9 +305,17 @@ router.post(
         ...user.preferences,
         ...preferences,
       };
+      const digestTimes =
+        updatedPreferences[UserPreference.BufferEmailNotificationsTimes]?.filter(
+          (minutes) =>
+            minutes >= EMAIL_DIGEST_START_MINUTES &&
+            minutes <= EMAIL_DIGEST_END_MINUTES &&
+            minutes % EMAIL_DIGEST_STEP_MINUTES === 0
+        ) ?? [];
+      updatedPreferences[UserPreference.BufferEmailNotificationsTimes] =
+        digestTimes;
       if (
-        !updatedPreferences[UserPreference.BufferEmailNotificationsTimes]
-          ?.length
+        !digestTimes.length
       ) {
         if (preferences[UserPreference.BufferEmailNotifications] === true) {
           throw ValidationError(

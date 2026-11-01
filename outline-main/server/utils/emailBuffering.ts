@@ -1,3 +1,9 @@
+import {
+  EMAIL_DIGEST_END_MINUTES,
+  EMAIL_DIGEST_START_MINUTES,
+  EMAIL_DIGEST_STEP_MINUTES,
+} from "@shared/constants";
+
 export const EMAIL_DIGEST_TIME_ZONE = "America/New_York";
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
@@ -65,9 +71,9 @@ export function getNextEmailDigestAt(
     selectedTimes.some(
       (minutes) =>
         !Number.isInteger(minutes) ||
-        minutes < 0 ||
-        minutes > 23 * 60 + 30 ||
-        minutes % 30 !== 0
+        minutes < EMAIL_DIGEST_START_MINUTES ||
+        minutes > EMAIL_DIGEST_END_MINUTES ||
+        minutes % EMAIL_DIGEST_STEP_MINUTES !== 0
     )
   ) {
     throw new RangeError("Digest times must be 30-minute Eastern time slots");

@@ -1,5 +1,11 @@
 import { z } from "zod";
 import {
+  EMAIL_DIGEST_END_MINUTES,
+  EMAIL_DIGEST_START_MINUTES,
+  EMAIL_DIGEST_STEP_MINUTES,
+  EMAIL_DIGEST_TIME_SLOT_COUNT,
+} from "@shared/constants";
+import {
   NotificationBadgeType,
   NotificationEventType,
   SidebarSection,
@@ -135,11 +141,13 @@ export const UsersUpdateSchema = BaseSchema.extend({
             z
               .number()
               .int()
-              .min(0)
-              .max(23 * 60 + 30)
-              .refine((minutes) => minutes % 30 === 0)
+              .min(EMAIL_DIGEST_START_MINUTES)
+              .max(EMAIL_DIGEST_END_MINUTES)
+              .refine(
+                (minutes) => minutes % EMAIL_DIGEST_STEP_MINUTES === 0
+              )
           )
-          .max(48)
+          .max(EMAIL_DIGEST_TIME_SLOT_COUNT)
           .refine((times) => new Set(times).size === times.length),
         [UserPreference.BufferEmailNotificationsMinutes]: z
           .number()

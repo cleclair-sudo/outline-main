@@ -16,6 +16,14 @@ import {
 
 export const MAX_AVATAR_DISPLAY = 6;
 
+export const EMAIL_DIGEST_START_MINUTES = 9 * 60;
+export const EMAIL_DIGEST_END_MINUTES = 20 * 60;
+export const EMAIL_DIGEST_STEP_MINUTES = 30;
+export const EMAIL_DIGEST_TIME_SLOT_COUNT =
+  (EMAIL_DIGEST_END_MINUTES - EMAIL_DIGEST_START_MINUTES) /
+    EMAIL_DIGEST_STEP_MINUTES +
+  1;
+
 /** Height of the app's fixed header in pixels. */
 export const HEADER_HEIGHT = 56;
 

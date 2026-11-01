@@ -10,19 +10,39 @@ import {
   DoneIcon,
   EditIcon,
   EmailIcon,
+  CheckmarkIcon,
   PublishIcon,
   SmileyIcon,
   StarredIcon,
   UserIcon,
   GroupIcon,
 } from "outline-icons";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as React from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import styled from "styled-components";
+import {
+  EMAIL_DIGEST_END_MINUTES,
+  EMAIL_DIGEST_START_MINUTES,
+  EMAIL_DIGEST_STEP_MINUTES,
+  EMAIL_DIGEST_TIME_SLOT_COUNT,
+} from "@shared/constants";
 import { NotificationEventType, UserPreference } from "@shared/types";
+import Button from "~/components/Button";
 import Heading from "~/components/Heading";
 import Notice from "~/components/Notice";
+import {
+  Menu,
+  MenuContent,
+  MenuTrigger,
+} from "~/components/primitives/Menu";
+import { MenuProvider } from "~/components/primitives/Menu/MenuContext";
+import {
+  MenuButton as StyledMenuButton,
+  MenuLabel,
+  SelectedIconWrapper,
+} from "~/components/primitives/components/Menu";
 import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
 import Text from "~/components/Text";
@@ -34,8 +54,14 @@ import SettingRow from "./components/SettingRow";
 function Notifications() {
   const user = useCurrentUser();
   const { t } = useTranslation();
-  const digestTimes =
-    user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? [];
+  const digestTimes = (
+    user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? []
+  ).filter(
+    (minutes) =>
+      minutes >= EMAIL_DIGEST_START_MINUTES &&
+      minutes <= EMAIL_DIGEST_END_MINUTES &&
+      minutes % EMAIL_DIGEST_STEP_MINUTES === 0
+  );
 
   const options = [
     {
@@ -183,11 +209,7 @@ function Notifications() {
 
   const handleBufferEmailNotificationsChange = React.useCallback(
     async (checked: boolean) => {
-      if (
-        checked &&
-        !user.getPreference(UserPreference.BufferEmailNotificationsTimes)
-          ?.length
-      ) {
+      if (checked && !digestTimes.length) {
         toast.error(t("Choose at least one digest time before enabling digests."));
         return;
       }
@@ -196,27 +218,38 @@ function Notifications() {
       await user.save();
       showSuccessMessage();
     },
-    [user, showSuccessMessage, t]
+    [user, showSuccessMessage, t, digestTimes.length]
   );
 
   const digestTimeOptions = React.useMemo(
     () =>
-      Array.from({ length: 48 }, (_, index) => {
-        const minutes = index * 30;
-        const label = new Intl.DateTimeFormat(undefined, {
-          timeZone: "UTC",
-          hour: "numeric",
-          minute: "2-digit",
-        }).format(new Date(Date.UTC(2020, 0, 1, 0, minutes)));
-        return { minutes, label };
-      }),
+      Array.from(
+        { length: EMAIL_DIGEST_TIME_SLOT_COUNT },
+        (_, index) => {
+          const minutes =
+            EMAIL_DIGEST_START_MINUTES + index * EMAIL_DIGEST_STEP_MINUTES;
+          const label = new Intl.DateTimeFormat(undefined, {
+            timeZone: "UTC",
+            hour: "numeric",
+            minute: "2-digit",
+          }).format(new Date(Date.UTC(2020, 0, 1, 0, minutes)));
+          return { minutes, label };
+        }
+      ),
     []
   );
 
   const handleDigestTimeChange = React.useCallback(
     async (minutes: number, checked: boolean) => {
       const selectedTimes = new Set(
-        user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? []
+        (
+          user.getPreference(UserPreference.BufferEmailNotificationsTimes) ?? []
+        ).filter(
+          (selectedMinutes) =>
+            selectedMinutes >= EMAIL_DIGEST_START_MINUTES &&
+            selectedMinutes <= EMAIL_DIGEST_END_MINUTES &&
+            selectedMinutes % EMAIL_DIGEST_STEP_MINUTES === 0
+        )
       );
       const hadSelectedTimes = selectedTimes.size > 0;
       if (checked) {
@@ -314,26 +347,51 @@ function Notifications() {
         name={UserPreference.BufferEmailNotificationsTimes}
         label={t("Digest delivery times")}
         description={t(
-          "Choose any number of 30-minute send times in Eastern Time. With digests turned off, notification emails are sent right away."
+          "Choose one or more times from 9:00 AM to 8:00 PM Eastern Time. With digests turned off, notification emails are sent right away."
         )}
       >
-        <DigestTimesGrid>
-          {digestTimeOptions.map(({ minutes, label }) => (
-            <DigestTimeOption key={minutes}>
-              <input
-                type="checkbox"
-                name={UserPreference.BufferEmailNotificationsTimes}
-                value={minutes}
-                checked={digestTimes.includes(minutes)}
-                aria-label={label}
-                onChange={(event) =>
-                  handleDigestTimeChange(minutes, event.target.checked)
-                }
-              />
-              {label}
-            </DigestTimeOption>
-          ))}
-        </DigestTimesGrid>
+        <MenuProvider variant="dropdown">
+          <Menu modal={false}>
+            <MenuTrigger aria-label={t("Select digest delivery times")}>
+              <Button neutral disclosure fullwidth>
+                {digestTimes.length
+                  ? digestTimes.length === 1
+                    ? t("1 time selected")
+                    : t("{{count}} times selected", {
+                        count: digestTimes.length,
+                      })
+                  : t("Select times")}
+              </Button>
+            </MenuTrigger>
+            <MenuContent aria-label={t("Digest delivery times")} align="end">
+              {digestTimeOptions.map(({ minutes, label }) => {
+                const checked = digestTimes.includes(minutes);
+                return (
+                  <DropdownMenuPrimitive.CheckboxItem
+                    key={minutes}
+                    checked={checked}
+                    onCheckedChange={(nextChecked) =>
+                      handleDigestTimeChange(minutes, nextChecked === true)
+                    }
+                    onSelect={(event) => event.preventDefault()}
+                    asChild
+                  >
+                    <StyledMenuButton
+                      type="button"
+                      role="menuitemcheckbox"
+                      aria-checked={checked}
+                    >
+                      <MenuLabel>{label}</MenuLabel>
+                      <SelectedIconWrapper aria-hidden>
+                        {checked ? <CheckmarkIcon size={18} /> : null}
+                      </SelectedIconWrapper>
+                    </StyledMenuButton>
+                  </DropdownMenuPrimitive.CheckboxItem>
+                );
+              })}
+            </MenuContent>
+          </Menu>
+        </MenuProvider>
       </SettingRow>
       <SettingRow
         name={UserPreference.BufferEmailNotifications}
@@ -387,24 +445,3 @@ function Notifications() {
 }
 
 export default observer(Notifications);
-
-const DigestTimesGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  width: 100%;
-  max-height: 300px;
-  overflow-y: auto;
-
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-`;
-
-const DigestTimeOption = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  cursor: pointer;
-`;
