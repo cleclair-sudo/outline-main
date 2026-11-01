@@ -63,6 +63,7 @@ export interface BufferedEmailItem {
   metadata?: Record<string, unknown>;
   scheduledAt: number;
   digestIntervalMinutes?: number;
+  digestIntervalEndsAt?: number;
 }
 
 export default class BufferedEmailStore {

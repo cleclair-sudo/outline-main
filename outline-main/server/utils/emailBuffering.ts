@@ -7,6 +7,7 @@ export type EmailBufferingSettings = {
 export const EMAIL_DIGEST_TIME_ZONE = "America/New_York";
 const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
+export const EMAIL_DIGEST_SETTLE_DELAY_MS = 10 * MINUTE_MS;
 const MAX_EASTERN_OFFSET_CHANGE_MS = 2 * 60 * MINUTE_MS;
 const EASTERN_OFFSET_LOOKAROUND_MS = 2 * DAY_MS;
 const easternDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -18,6 +19,19 @@ const easternDateFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
   hourCycle: "h23",
 });
+const easternLogFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: EMAIL_DIGEST_TIME_ZONE,
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZoneName: "short",
+});
+
+export function formatEmailDigestTime(timestamp: number): string {
+  return easternLogFormatter.format(new Date(timestamp));
+}
 
 function getEasternWallTime(timestamp: number): number {
   const parts = easternDateFormatter.formatToParts(new Date(timestamp));
@@ -132,13 +146,13 @@ export function getNextEmailDigestAt(
   now: number,
   windowMinutes: number
 ): number {
-  return getEmailDigestInterval(now, windowMinutes).endAt;
+  return getEmailDigestInterval(now, windowMinutes).sendAt;
 }
 
 export function getEmailDigestInterval(
   now: number,
   windowMinutes: number
-): { startAt: number; endAt: number } {
+): { startAt: number; endAt: number; sendAt: number } {
   if (
     !Number.isFinite(now) ||
     !Number.isFinite(windowMinutes) ||
@@ -149,9 +163,12 @@ export function getEmailDigestInterval(
 
   const windowMs = windowMinutes * 60 * 1000;
   const offsets = getEasternOffsets(now);
+  const startAt = findIntervalBoundary(now, windowMs, -1, offsets);
+  const endAt = findIntervalBoundary(now, windowMs, 1, offsets);
   return {
-    startAt: findIntervalBoundary(now, windowMs, -1, offsets),
-    endAt: findIntervalBoundary(now, windowMs, 1, offsets),
+    startAt,
+    endAt,
+    sendAt: endAt + EMAIL_DIGEST_SETTLE_DELAY_MS,
   };
 }
 

@@ -19,4 +19,30 @@ describe("email digest", () => {
       ]).map((group) => group.length)
     ).toEqual([2, 1]);
   });
+
+  it("keeps notifications from different digest intervals separate", () => {
+    const sameIntervalEnd = Date.parse("2026-11-01T10:00:00Z");
+    const nextIntervalEnd = Date.parse("2026-11-01T17:00:00Z");
+    const sameIntervalItems = [
+      {
+        ...item("user@example.com"),
+        scheduledAt: sameIntervalEnd + 10 * 60 * 1000,
+        digestIntervalEndsAt: sameIntervalEnd,
+      },
+      {
+        ...item("user@example.com"),
+        scheduledAt: sameIntervalEnd + 10 * 60 * 1000,
+        digestIntervalEndsAt: sameIntervalEnd,
+      },
+      {
+        ...item("user@example.com"),
+        scheduledAt: nextIntervalEnd + 10 * 60 * 1000,
+        digestIntervalEndsAt: nextIntervalEnd,
+      },
+    ];
+
+    expect(
+      groupBufferedEmailItems(sameIntervalItems).map((group) => group.length)
+    ).toEqual([2, 1]);
+  });
 });

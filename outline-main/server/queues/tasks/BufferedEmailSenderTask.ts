@@ -5,7 +5,10 @@ import BufferedEmailStore, {
 import emails from "@server/emails/templates";
 import DigestEmail from "@server/emails/templates/DigestEmail";
 import Logger from "@server/logging/Logger";
-import { EMAIL_DIGEST_TIME_ZONE } from "@server/utils/emailBuffering";
+import {
+  EMAIL_DIGEST_TIME_ZONE,
+  formatEmailDigestTime,
+} from "@server/utils/emailBuffering";
 import { groupBufferedEmailItems } from "@server/utils/emailDigest";
 
 type Props = {};
@@ -69,9 +72,36 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
             intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
             intervalEndsAt: Array.from(
               new Set(
+                group
+                  .map(
+                    (item) =>
+                      item.digestIntervalEndsAt ?? item.scheduledAt
+                  )
+                  .map((timestamp) => new Date(timestamp).toISOString())
+              )
+            ),
+            intervalEndsAtEastern: Array.from(
+              new Set(
+                group.map((item) =>
+                  formatEmailDigestTime(
+                    item.digestIntervalEndsAt ?? item.scheduledAt
+                  )
+                )
+              )
+            ),
+            sendAfterAt: Array.from(
+              new Set(
                 group.map((item) => new Date(item.scheduledAt).toISOString())
               )
             ),
+            scheduledNotifications: group.map((item) => ({
+              notificationId:
+                typeof item.metadata?.notificationId === "string"
+                  ? item.metadata.notificationId
+                  : undefined,
+              scheduledFor: new Date(item.scheduledAt).toISOString(),
+              scheduledForEastern: formatEmailDigestTime(item.scheduledAt),
+            })),
           }
         );
         const email = new DigestEmail({
@@ -100,7 +130,15 @@ export default class BufferedEmailSenderTask extends BaseTask<Props> {
             templateName: item.templateName,
             digestIntervalMinutes: item.digestIntervalMinutes,
             intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
-            intervalEndsAt: new Date(item.scheduledAt).toISOString(),
+            intervalEndsAt: new Date(
+              item.digestIntervalEndsAt ?? item.scheduledAt
+            ).toISOString(),
+            intervalEndsAtEastern: formatEmailDigestTime(
+              item.digestIntervalEndsAt ?? item.scheduledAt
+            ),
+            sendAfterAt: new Date(item.scheduledAt).toISOString(),
+            scheduledFor: new Date(item.scheduledAt).toISOString(),
+            scheduledForEastern: formatEmailDigestTime(item.scheduledAt),
           }
         );
         const EmailClass = (emails as any)[item.templateName];

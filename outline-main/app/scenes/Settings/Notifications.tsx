@@ -299,7 +299,7 @@ function Notifications() {
         name={UserPreference.BufferEmailNotifications}
         label={t("Enable periodic digest")}
         description={t(
-          "Digests follow repeating Eastern Time boundaries, so your first digest may arrive sooner than the selected interval. Empty intervals are skipped."
+          "Digests follow repeating Eastern Time boundaries, so your first digest may arrive sooner than the selected interval. Digests are sent about 10 minutes after each interval ends to group delayed notifications; empty intervals are skipped."
         )}
         compact
       >

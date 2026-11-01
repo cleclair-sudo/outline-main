@@ -30,6 +30,7 @@ import { TaskPriority } from "@server/queues/tasks/base/BaseTask";
 import type { NotificationMetadata } from "@server/types";
 import {
   EMAIL_DIGEST_TIME_ZONE,
+  formatEmailDigestTime,
   getEmailBufferingWindowMinutes,
   getEmailDigestInterval,
 } from "@server/utils/emailBuffering";
@@ -152,14 +153,18 @@ export default abstract class BaseEmail<
             EMAIL_BUFFERING_WINDOW_HOURS: env.EMAIL_BUFFERING_WINDOW_HOURS,
             userBufferMinutes,
           });
-          const interval = getEmailDigestInterval(Date.now(), windowMinutes);
+          const interval = getEmailDigestInterval(
+            notification?.createdAt.getTime() ?? Date.now(),
+            windowMinutes
+          );
 
           await BufferedEmailStore.add({
             templateName,
             props: this.props as Record<string, unknown>,
             metadata: this.metadata as Record<string, unknown> | undefined,
-            scheduledAt: interval.endAt,
+            scheduledAt: interval.sendAt,
             digestIntervalMinutes: windowMinutes,
+            digestIntervalEndsAt: interval.endAt,
           });
 
           Logger.info(
@@ -168,10 +173,20 @@ export default abstract class BaseEmail<
             {
               templateName,
               userId: user.id,
+              notificationId: notification?.id,
+              notificationEvent: notification?.event,
+              notificationCreatedAt:
+                notification?.createdAt.toISOString(),
               digestIntervalMinutes: windowMinutes,
               intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
               intervalStartAt: new Date(interval.startAt).toISOString(),
+              intervalStartAtEastern: formatEmailDigestTime(interval.startAt),
               intervalEndAt: new Date(interval.endAt).toISOString(),
+              intervalEndAtEastern: formatEmailDigestTime(interval.endAt),
+              scheduledFor: new Date(interval.sendAt).toISOString(),
+              scheduledForEastern: formatEmailDigestTime(interval.sendAt),
+              sendAfterAt: new Date(interval.sendAt).toISOString(),
+              settlingDelayMinutes: 10,
               queued: true,
             }
           );

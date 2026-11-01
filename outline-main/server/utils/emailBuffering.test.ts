@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  EMAIL_DIGEST_SETTLE_DELAY_MS,
+  formatEmailDigestTime,
   getEmailBufferingCron,
   getEmailBufferingWindowMinutes,
   getEmailDigestInterval,
@@ -46,10 +48,19 @@ describe("email buffering", () => {
     expect(getEmailDigestInterval(now, 60)).toEqual({
       startAt: Date.parse("2024-01-15T12:00:00Z"),
       endAt: Date.parse("2024-01-15T13:00:00Z"),
+      sendAt: Date.parse("2024-01-15T13:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
     expect(getNextEmailDigestAt(now, 60)).toBe(
-      Date.parse("2024-01-15T13:00:00Z")
+      Date.parse("2024-01-15T13:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS
     );
+  });
+
+  it("formats scheduled email times in Eastern Time with the correct DST label", () => {
+    expect(
+      formatEmailDigestTime(Date.parse("2026-11-01T10:10:00Z"))
+    ).toContain("EST");
   });
 
   it("supports 48-hour Eastern intervals", () => {
@@ -57,6 +68,25 @@ describe("email buffering", () => {
     expect(getEmailDigestInterval(now, 48 * 60)).toEqual({
       startAt: Date.parse("2024-01-14T05:00:00Z"),
       endAt: Date.parse("2024-01-16T05:00:00Z"),
+      sendAt:
+        Date.parse("2024-01-16T05:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
+    });
+  });
+
+  it("keeps notifications created before the same 7-hour boundary together", () => {
+    const firstUpdate = Date.parse("2026-11-01T02:36:00Z");
+    const lastUpdate = Date.parse("2026-11-01T02:42:00Z");
+    const firstInterval = getEmailDigestInterval(firstUpdate, 7 * 60);
+    const lastInterval = getEmailDigestInterval(lastUpdate, 7 * 60);
+
+    expect(firstInterval).toEqual(lastInterval);
+    expect(firstInterval).toEqual({
+      startAt: Date.parse("2026-11-01T02:00:00Z"),
+      endAt: Date.parse("2026-11-01T10:00:00Z"),
+      sendAt:
+        Date.parse("2026-11-01T10:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
   });
 
@@ -65,12 +95,16 @@ describe("email buffering", () => {
     expect(getEmailDigestInterval(now, 60)).toEqual({
       startAt: Date.parse("2024-03-10T06:00:00Z"),
       endAt: Date.parse("2024-03-10T07:00:00Z"),
+      sendAt: Date.parse("2024-03-10T07:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
 
     const shortIntervalNow = Date.parse("2024-03-10T06:58:00Z");
     expect(getEmailDigestInterval(shortIntervalNow, 5)).toEqual({
       startAt: Date.parse("2024-03-10T06:55:00Z"),
       endAt: Date.parse("2024-03-10T07:00:00Z"),
+      sendAt: Date.parse("2024-03-10T07:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
   });
 
@@ -79,12 +113,16 @@ describe("email buffering", () => {
     expect(getEmailDigestInterval(firstOccurrence, 60)).toEqual({
       startAt: Date.parse("2024-11-03T05:00:00Z"),
       endAt: Date.parse("2024-11-03T06:00:00Z"),
+      sendAt: Date.parse("2024-11-03T06:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
 
     const now = Date.parse("2024-11-03T06:30:00Z");
     expect(getEmailDigestInterval(now, 60)).toEqual({
       startAt: Date.parse("2024-11-03T06:00:00Z"),
       endAt: Date.parse("2024-11-03T07:00:00Z"),
+      sendAt: Date.parse("2024-11-03T07:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
   });
 
@@ -93,12 +131,16 @@ describe("email buffering", () => {
     expect(getEmailDigestInterval(firstOccurrence, 5)).toEqual({
       startAt: Date.parse("2024-11-03T05:55:00Z"),
       endAt: Date.parse("2024-11-03T06:00:00Z"),
+      sendAt: Date.parse("2024-11-03T06:00:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
 
     const secondOccurrence = Date.parse("2024-11-03T06:01:00Z");
     expect(getEmailDigestInterval(secondOccurrence, 5)).toEqual({
       startAt: Date.parse("2024-11-03T06:00:00Z"),
       endAt: Date.parse("2024-11-03T06:05:00Z"),
+      sendAt: Date.parse("2024-11-03T06:05:00Z") +
+        EMAIL_DIGEST_SETTLE_DELAY_MS,
     });
   });
 
