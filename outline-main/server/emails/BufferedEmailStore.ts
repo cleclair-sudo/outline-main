@@ -39,12 +39,30 @@ end
 return 1
 `;
 
+const makeDueForRecipientScript = `
+local items = redis.call("ZRANGE", KEYS[1], 0, -1)
+local count = 0
+for _, serialized in ipairs(items) do
+  local ok, item = pcall(cjson.decode, serialized)
+  if ok and
+    type(item) == "table" and
+    type(item.props) == "table" and
+    type(item.props.to) == "string" and
+    string.lower(item.props.to) == ARGV[2] then
+    redis.call("ZADD", KEYS[1], ARGV[1], serialized)
+    count = count + 1
+  end
+end
+return count
+`;
+
 export interface BufferedEmailItem {
   id?: string;
   templateName: string;
   props: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   scheduledAt: number;
+  digestIntervalMinutes?: number;
 }
 
 export default class BufferedEmailStore {
@@ -120,6 +138,16 @@ export default class BufferedEmailStore {
       PROCESSING_KEY,
       ...args
     );
+  }
+
+  static async makeDueForRecipient(email: string): Promise<number> {
+    return (await RedisAdapter.defaultClient.eval(
+      makeDueForRecipientScript,
+      1,
+      KEY,
+      `${Date.now()}`,
+      email.toLowerCase()
+    )) as number;
   }
 
   static async count(): Promise<number> {

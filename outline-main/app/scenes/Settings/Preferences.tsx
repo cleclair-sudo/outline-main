@@ -118,49 +118,6 @@ function Preferences() {
     [user, t]
   );
 
-  const handleBufferEmailNotificationsChange = React.useCallback(
-    async (checked: boolean) => {
-      user.setPreference(UserPreference.BufferEmailNotifications, checked);
-      await user.save();
-      toast.success(t("Preferences saved"));
-    },
-    [user, t]
-  );
-
-  const bufferMinutesOptions: Option[] = React.useMemo(
-    () => [
-      { type: "item", label: t("5 minutes"), value: "5" },
-      { type: "item", label: t("10 minutes"), value: "10" },
-      { type: "item", label: t("20 minutes"), value: "20" },
-      { type: "item", label: t("30 minutes"), value: "30" },
-      { type: "item", label: t("1 hour"), value: "60" },
-      { type: "item", label: t("2 hours"), value: "120" },
-      { type: "item", label: t("3 hours"), value: "180" },
-      { type: "item", label: t("4 hours"), value: "240" },
-      { type: "item", label: t("5 hours"), value: "300" },
-      { type: "item", label: t("6 hours"), value: "360" },
-      { type: "item", label: t("7 hours"), value: "420" },
-      { type: "item", label: t("8 hours"), value: "480" },
-      { type: "item", label: t("9 hours"), value: "540" },
-      { type: "item", label: t("10 hours"), value: "600" },
-      { type: "item", label: t("11 hours"), value: "660" },
-      { type: "item", label: t("12 hours"), value: "720" },
-    ],
-    [t]
-  );
-
-  const handleBufferEmailNotificationsMinutesChange = React.useCallback(
-    async (value: string) => {
-      user.setPreference(
-        UserPreference.BufferEmailNotificationsMinutes,
-        Number(value)
-      );
-      await user.save();
-      toast.success(t("Preferences saved"));
-    },
-    [user, t]
-  );
-
   const notificationBadgeOptions: Option[] = React.useMemo(
     () => [
       {
@@ -371,38 +328,6 @@ function Preferences() {
         />
       </SettingRow>
 
-      <SettingRow
-        name={UserPreference.BufferEmailNotifications}
-        label={t("Enable digest")}
-        description={t(
-          "Combine your notifications into one email, sent at the timeframe selected below."
-        )}
-      >
-        <Switch
-          id={UserPreference.BufferEmailNotifications}
-          name={UserPreference.BufferEmailNotifications}
-          checked={!!user.getPreference(UserPreference.BufferEmailNotifications)}
-          onChange={handleBufferEmailNotificationsChange}
-        />
-      </SettingRow>
-      <SettingRow
-        name={UserPreference.BufferEmailNotificationsMinutes}
-        label={t("Select digest timeframe")}
-        description={t(
-          "Choose how often the notification digest is sent."
-        )}
-      >
-        <InputSelect
-          options={bufferMinutesOptions}
-          value={String(
-            user.getPreference(UserPreference.BufferEmailNotificationsMinutes)
-          )}
-          onChange={handleBufferEmailNotificationsMinutesChange}
-          label={t("Select digest timeframe")}
-          labelHidden
-          disabled={!user.getPreference(UserPreference.BufferEmailNotifications)}
-        />
-      </SettingRow>
       <AutoLaunchSetting />
       <SettingRow
         border={false}

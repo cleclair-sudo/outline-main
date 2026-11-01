@@ -28,7 +28,11 @@ import { TextHelper } from "@server/models/helpers/TextHelper";
 import { taskQueue } from "@server/queues";
 import { TaskPriority } from "@server/queues/tasks/base/BaseTask";
 import type { NotificationMetadata } from "@server/types";
-import { getEmailBufferingWindowMinutes } from "@server/utils/emailBuffering";
+import {
+  EMAIL_DIGEST_TIME_ZONE,
+  getEmailBufferingWindowMinutes,
+  getEmailDigestInterval,
+} from "@server/utils/emailBuffering";
 
 export enum EmailMessageCategory {
   Authentication = "authentication",
@@ -148,19 +152,28 @@ export default abstract class BaseEmail<
             EMAIL_BUFFERING_WINDOW_HOURS: env.EMAIL_BUFFERING_WINDOW_HOURS,
             userBufferMinutes,
           });
-          const msWindow = windowMinutes * 60 * 1000;
-          const scheduledAt = Date.now() + msWindow;
+          const interval = getEmailDigestInterval(Date.now(), windowMinutes);
 
           await BufferedEmailStore.add({
             templateName,
             props: this.props as Record<string, unknown>,
             metadata: this.metadata as Record<string, unknown> | undefined,
-            scheduledAt,
+            scheduledAt: interval.endAt,
+            digestIntervalMinutes: windowMinutes,
           });
 
           Logger.info(
             "email",
-            `Email ${templateName} buffered for user ${user.id} with ${windowMinutes} minute delay; scheduledAt=${scheduledAt}`
+            "Buffered email queued for digest interval",
+            {
+              templateName,
+              userId: user.id,
+              digestIntervalMinutes: windowMinutes,
+              intervalTimeZone: EMAIL_DIGEST_TIME_ZONE,
+              intervalStartAt: new Date(interval.startAt).toISOString(),
+              intervalEndAt: new Date(interval.endAt).toISOString(),
+              queued: true,
+            }
           );
 
           Metrics.increment("email.buffered", { templateName });

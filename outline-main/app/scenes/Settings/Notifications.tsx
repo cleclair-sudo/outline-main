@@ -21,6 +21,8 @@ import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import { NotificationEventType, UserPreference } from "@shared/types";
 import Heading from "~/components/Heading";
+import type { Option } from "~/components/InputSelect";
+import { InputSelect } from "~/components/InputSelect";
 import Notice from "~/components/Notice";
 import Scene from "~/components/Scene";
 import Switch from "~/components/Switch";
@@ -178,6 +180,51 @@ function Notifications() {
     [user, showSuccessMessage]
   );
 
+  const handleBufferEmailNotificationsChange = React.useCallback(
+    async (checked: boolean) => {
+      user.setPreference(UserPreference.BufferEmailNotifications, checked);
+      await user.save();
+      showSuccessMessage();
+    },
+    [user, showSuccessMessage]
+  );
+
+  const bufferMinutesOptions: Option[] = React.useMemo(
+    () =>
+      [
+        { type: "item", label: t("5 minutes"), value: "5" },
+        { type: "item", label: t("10 minutes"), value: "10" },
+        { type: "item", label: t("20 minutes"), value: "20" },
+        { type: "item", label: t("30 minutes"), value: "30" },
+        { type: "item", label: t("1 hour"), value: "60" },
+        { type: "item", label: t("2 hours"), value: "120" },
+        { type: "item", label: t("3 hours"), value: "180" },
+        { type: "item", label: t("4 hours"), value: "240" },
+        { type: "item", label: t("5 hours"), value: "300" },
+        { type: "item", label: t("6 hours"), value: "360" },
+        { type: "item", label: t("7 hours"), value: "420" },
+        { type: "item", label: t("8 hours"), value: "480" },
+        { type: "item", label: t("9 hours"), value: "540" },
+        { type: "item", label: t("10 hours"), value: "600" },
+        { type: "item", label: t("11 hours"), value: "660" },
+        { type: "item", label: t("12 hours"), value: "720" },
+        { type: "item", label: t("48 hours"), value: "2880" },
+      ] satisfies Option[],
+    [t]
+  );
+
+  const handleBufferEmailNotificationsMinutesChange = React.useCallback(
+    async (value: string) => {
+      user.setPreference(
+        UserPreference.BufferEmailNotificationsMinutes,
+        Number(value)
+      );
+      await user.save();
+      showSuccessMessage();
+    },
+    [user, showSuccessMessage]
+  );
+
   const handleToggleAll = React.useCallback(
     async (checked: boolean) => {
       runInAction(() => {
@@ -244,6 +291,39 @@ function Notifications() {
           name={UserPreference.EmailViewedDocumentNotifications}
           checked={!!user.getPreference(UserPreference.EmailViewedDocumentNotifications)}
           onChange={handleEmailViewedNotificationsChange}
+        />
+      </SettingRow>
+
+      <Heading as="h2">{t("Email digest")}</Heading>
+      <SettingRow
+        name={UserPreference.BufferEmailNotifications}
+        label={t("Enable periodic digest")}
+        description={t(
+          "Digests follow repeating Eastern Time boundaries, so your first digest may arrive sooner than the selected interval. Empty intervals are skipped."
+        )}
+        compact
+      >
+        <Switch
+          id={UserPreference.BufferEmailNotifications}
+          name={UserPreference.BufferEmailNotifications}
+          checked={!!user.getPreference(UserPreference.BufferEmailNotifications)}
+          onChange={handleBufferEmailNotificationsChange}
+        />
+      </SettingRow>
+      <SettingRow
+        name={UserPreference.BufferEmailNotificationsMinutes}
+        label={t("Digest interval")}
+        compact
+      >
+        <InputSelect
+          options={bufferMinutesOptions}
+          value={String(
+            user.getPreference(UserPreference.BufferEmailNotificationsMinutes)
+          )}
+          onChange={handleBufferEmailNotificationsMinutesChange}
+          label={t("Digest interval")}
+          labelHidden
+          disabled={!user.getPreference(UserPreference.BufferEmailNotifications)}
         />
       </SettingRow>
 
