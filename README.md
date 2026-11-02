@@ -5,7 +5,7 @@ This is a custom version of the open source Outline project. This is developed b
 ## Project Details 
 
 This project is hosted using hosting platforms such as Elestio or Railway. Launching this includes using Redis & Postgres. The best way to use this in production is
-by starting an Outline service on Elestio and then redirecting the Docker image to a customized Dockerfile (pulling from custom github repo) (found on this repo). 
+by starting an Outline service on Elestio and then changing the wk-outline image definition in the Docker file on the server to point to this (or a custom Github Repo). You may also need to find an alternative to Minio (the image-file built into Elestio contains a special version of Minio that is unavailable after changing images)/
 
 ## Outline Modifications (in testing)
 
@@ -15,4 +15,5 @@ by starting an Outline service on Elestio and then redirecting the Docker image 
 - Added a log to show when emails are sent out for diag
 - Added a user preference to not send email updates if they have seen the update already. By default, users will get email notifications regardless of if they saw it in the wiki or not. They can turn it off in notification settings
 - Remove junk connection messages from debug=info, Set LOG_LEVEL=debug if you ever need to see the connection messages again.
+- Added LOG codes to say what messages, users & times notifications are sent. This can likely be removed when done with extended testing.
   
